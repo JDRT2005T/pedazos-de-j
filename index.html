@@ -106,8 +106,8 @@ const FRESH=()=>({started:false, inv:[], f:{}, t:0, hints:3, mir:Array(11).fill(
 let S=FRESH(), sel=null;
 if (/[?&]reset=1/.test(location.search)) { try{localStorage.removeItem(KEY)}catch(e){} }
 try{ const d=JSON.parse(localStorage.getItem(KEY)); if(d&&d.started) S=Object.assign(FRESH(),d); }catch(e){}
-let WORLD=S.world||'casa', SP=null; const activeScene=()=>WORLD==='espacio'?space:scene;
-function save(){ S.pos=[+player.x.toFixed(2),+player.z.toFixed(2),+yaw.toFixed(2)]; if(SP&&WORLD==='espacio'&&SP.last) S.sp=[SP.x,SP.y,SP.z].map(v=>+v.toFixed(2)); try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} }
+let WORLD=S.world||'casa', SP=null; const activeScene=()=>WORLD==='espacio'?space:WORLD==='bosque'?forest:scene;
+function save(){ S.pos=[+player.x.toFixed(2),+player.z.toFixed(2),+yaw.toFixed(2)]; if(SP&&WORLD==='espacio'&&SP.last) S.sp=[SP.x,SP.y,SP.z].map(v=>+v.toFixed(2)); if(WORLD==='bosque'&&typeof FP!=='undefined') S.fp=[FP.x,FP.z,yaw].map(v=>+v.toFixed(2)); try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} }
 
 const ITEMS={
   carta:{e:'✉️',n:'Carta de J',d:'La carta que te dejé.'},
@@ -159,7 +159,7 @@ $('#inv').addEventListener('click',e=>{
   if(sel===id){ examine(id); return; }
   sel=id; renderInv(); toast(ITEMS[id].n+' — tócalo otra vez para verlo, o toca algo del cuarto para usarlo');
 });
-function examine(id){ if(id==='carta') return showLetter(); const it=ITEMS[id]; say(it.e+' '+it.n,it.d); }
+function examine(id){ if(id==='carta') return showLetter(); if(id==='flauta') return openFlute(false); const it=ITEMS[id]; say(it.e+' '+it.n,it.d); }
 function combine(a,b){
   if([a,b].sort().join('+')==='llaveA+llaveB'){ take('llaveA'); take('llaveB'); sel=null; sfx('ok'); give('llave',true);
     say('🗝️ ¡Encajaron!','Las dos mitades hicieron <b>clic</b>. Ahora tienes una llave dorada completa.'); return; }
@@ -170,7 +170,7 @@ setInterval(()=>{ if(!S.started||$('#fin').style.display==='flex'||document.hidd
 function roomOf(z){ return z>-4?'entrada':z>-12?'espejos':'lab'; }
 const ROOMNAME={entrada:'🏠 La Entrada',espejos:'🪞 Cuarto de Espejos',lab:'🧪 Laboratorio'};
 function hintText(){
-  if(WORLD==='espacio') return spaceHint();
+  if(WORLD==='espacio') return spaceHint(); if(WORLD==='bosque') return forestHint();
   const f=S.f, r=roomOf(player.z);
   if(r==='entrada'){
     if(!f.carta) return 'Empieza por la carta que está en el piso. Busca los brillitos ✦.';
@@ -207,7 +207,7 @@ $('#menuBtn').onclick=()=>{
     });
   });
 };
-function updHud(){ $('#hintBtn').textContent='💡 '+S.hints; $('#timer').textContent='⏱ '+fmt(S.t); $('#roomName').textContent=WORLD==='espacio'?'🌌 El Espacio':ROOMNAME[roomOf(player.z)];
+function updHud(){ $('#hintBtn').textContent='💡 '+S.hints; $('#timer').textContent='⏱ '+fmt(S.t); $('#roomName').textContent=WORLD==='espacio'?'🌌 El Espacio':WORLD==='bosque'?'🌲 Bosque Mágico':ROOMNAME[roomOf(player.z)];
   $('#parts').textContent='🧩 '+S.parts.length+'/7'; $('#parts').style.display=(S.parts.length||WORLD!=='casa')?'inline-block':'none';
   $('#jumpBtn').style.display=WORLD==='espacio'?'block':'none'; }
 function showLetter(){
@@ -511,7 +511,7 @@ cvs.addEventListener('touchmove',e=>{ e.preventDefault();
     else if(!focus){ yaw-=dx*.0055; pitch=Math.max(-1.25,Math.min(1.1,pitch-dy*.0045)); } } },{passive:false});
 function endTouch(e){ for(const t of e.changedTouches){ const T=touches[t.identifier]; if(!T) continue; delete touches[t.identifier];
   if(T.joy){ joy.style.display='none'; move.x=move.y=0; }
-  if(T.moved<12&&performance.now()-T.t0<400) tap(t.clientX,t.clientY); } }
+  if(T.moved<14&&performance.now()-T.t0<650) tap(t.clientX,t.clientY); } }
 cvs.addEventListener('touchend',endTouch); cvs.addEventListener('touchcancel',endTouch);
 let md=null;
 cvs.addEventListener('mousedown',e=>{ md={x:e.clientX,y:e.clientY,m:0}; sfx('tap'); });
@@ -523,6 +523,9 @@ const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
 function tap(x,y){
   if(modalOpen()||busy||$('#fin').style.display==='flex') return;
   const r=cvs.getBoundingClientRect(); ndc.set((x-r.left)/r.width*2-1,-(y-r.top)/r.height*2+1); ray.setFromCamera(ndc,camera);
+  if(focus==='mush'){ const hits=ray.intersectObjects(MUSH.map(m=>m.hit),false); if(hits.length) tapMush(hits[0].object.userData.mush); return; }
+  if(WORLD==='bosque'){ const hs=ray.intersectObjects(FINTER,true);
+    for(const h of hs){ let o=h.object; while(o&&!o.userData.act) o=o.parent; if(!o||!o.visible) continue; if(h.distance>5.5){ toast('Acércate más 👣'); return; } doAct(o.userData.act); return; } return; }
   if(focus){ const hits=ray.intersectObjects(MIRRORS.map(m=>m.hit),false); if(hits.length) turnMirror(hits[0].object.userData.mirror); return; }
   if(WORLD==='espacio'){ const hs=ray.intersectObjects(SINTER,true);
     for(const h of hs){ let o=h.object; while(o&&!o.userData.act) o=o.parent; if(!o||!o.visible) continue; if(h.distance>5){ toast('Acércate más 👣'); return; } doAct(o.userData.act); return; } return; }
@@ -928,16 +931,311 @@ Object.assign(ACT,{
   telescopio(){ sfx('tap'); openTele(); },
   ojos(){ collectEyes(); },
   volver(){ if(switching) return; goCasa(); },
-  portal2(){ if(switching||$('#fin').style.display==='flex') return; sfx('magic');
-    showFin(`<div style="font-size:64px">🌲</div><h2 style="margin:8px 0">¡Mundo 1 completo, ${P.apodo}!</h2>
-      <p style="color:#d9c8ff">🧩 Partes de J: <b>${S.parts.length}/7</b> · ⏱ <b>${fmt(S.t)}</b> · 💡 <b>${S.hints}</b></p>
-      <p style="color:#d9c8ff;max-width:320px">El portal verde te lleva al <b>🌲 Bosque Mágico</b>, donde están escondidos mis oídos 👂.</p>
-      <p style="color:#9a88b8;font-size:14px">(Este mundo todavía se está construyendo ✨)</p><button class="btn sec" id="backSp">Volver al espacio</button>`);
-    $('#backSp').onclick=()=>{ $('#fin').style.display='none'; SP.x=0; SP.z=-49; SP.y=PT.top+.3; yaw=0; }; },
+  portal2(){ if(switching) return; goBosque(); },
 });
 function applySpaceState(){ if(S.f.jDone&&S.f.sDone) constellationReveal(false); if(S.f.ojos){ eyes.visible=false; nextPortal.visible=true; } }
 applySpaceState();
 Object.assign(window.G,{PLATS, spaceStep:(...a)=>spaceStep(...a), updateSpace:(...a)=>updateSpace(...a), setYaw:v=>{yaw=v}, get SP(){return SP}, goSpace:()=>goSpace(), jump:()=>{jumpReq=true}, star:id=>tsvg.querySelector(`[data-star="${id}"]`).dispatchEvent(new MouseEvent('click',{bubbles:true}))});
+
+// ================== MUNDO 2: EL BOSQUE MÁGICO ==================
+var FP={x:0,z:12};
+const forest=new THREE.Scene(); forest.environment=scene.environment;
+forest.background=new THREE.Color(0x0a1626); forest.fog=new THREE.FogExp2(0x0a1626,.042);
+const FINTER=[], FCIRC=[], FRECT=[];
+function fact(obj,name,spark){ obj.userData.act=name; FINTER.push(obj); if(spark) addSpark(name,spark,forest); return obj; }
+Object.assign(DONE,{cartel:()=>S.f.cartel, buho:()=>S.f.owl, campana0:()=>S.f.bell0, campana1:()=>S.f.bell1, campana2:()=>S.f.bell2, campana3:()=>S.f.bell3,
+  espinas:()=>S.f.espinas||!S.f.owl, reina:()=>S.f.simon||!S.f.espinas, oidos:()=>S.f.oidos||!S.f.simon, portal3:()=>!S.f.oidos, volverEsp:()=>true});
+let _seed=7; const rnd=()=>{ _seed=(_seed*16807)%2147483647; return (_seed-1)/2147483646; };
+function note(f,d=.6,vol=.13){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return; }
+  const t=AC.currentTime; for(const [m,v] of [[1,1],[2,.35],[3,.12]]){ const o=AC.createOscillator(), g=AC.createGain(); o.type='sine'; o.frequency.value=f*m;
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol*v,t+.01); g.gain.exponentialRampToValueAtTime(.001,t+d*(m===1?1.6:.8)); o.connect(g).connect(AC.destination); o.start(t); o.stop(t+d*1.7); } }
+// terreno
+function hG(x,z){ let h=.35*Math.sin(x*.16)*Math.cos(z*.13)+.25*Math.sin(x*.29+z*.21+1); const ds=Math.abs(z+4); if(ds<2.2) h-=.9*Math.pow(1-ds/2.2,1.5); return h; }
+function walkH(x,z){ let h=hG(x,z); if(Math.abs(x-6)<1.1&&Math.abs(z+4)<2.1) h=Math.max(h,.2+.35*Math.cos(Math.min(1,Math.abs(z+4)/2.1)*Math.PI/2)); return h; }
+const grassTex=ctex(256,256,g=>{ g.fillStyle='#1d3a2a'; g.fillRect(0,0,256,256); for(let i=0;i<2200;i++){ const c=Math.random(); g.fillStyle=c<.5?'rgba(40,90,60,.6)':c<.8?'rgba(20,50,35,.7)':'rgba(70,130,80,.4)'; g.fillRect(Math.random()*256,Math.random()*256,2,4+Math.random()*4); } },[22,22]);
+{ const geo=new THREE.PlaneGeometry(90,90,90,90); geo.rotateX(-Math.PI/2); const p=geo.attributes.position; for(let i=0;i<p.count;i++) p.setY(i,hG(p.getX(i),p.getZ(i)+5)); geo.computeVertexNormals();
+  const ground=new THREE.Mesh(geo,M(0xffffff,{map:grassTex,r:1,env:.2})); ground.position.z=5; forest.add(ground); }
+forest.add(new THREE.HemisphereLight(0x6a88cc,0x2a4038,.95));
+{ const mn=new THREE.DirectionalLight(0xa8c0ff,1.1); mn.position.set(-30,40,-40); forest.add(mn); }
+{ const m1=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:0xdfe8ff,transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending})); m1.position.set(-70,55,-110); m1.scale.setScalar(60); forest.add(m1);
+  const m2=new THREE.Mesh(new THREE.CircleGeometry(9,40),new THREE.MeshBasicMaterial({color:0xf4f6ff,fog:false})); m2.position.copy(m1.position); m2.lookAt(0,0,0); forest.add(m2);
+  const st=[]; for(let i=0;i<500;i++){ const v=new THREE.Vector3().randomDirection(); v.y=Math.abs(v.y)*.9+.1; v.multiplyScalar(200); st.push(v.x,v.y,v.z); }
+  const sg=new THREE.BufferGeometry(); sg.setAttribute('position',new THREE.Float32BufferAttribute(st,3)); forest.add(new THREE.Points(sg,new THREE.PointsMaterial({map:dotTex,size:1.4,color:0xffffff,transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending}))); }
+// río con puente
+const waterU={t:{value:0}};
+{ const w=new THREE.Mesh(new THREE.PlaneGeometry(70,2.6),new THREE.ShaderMaterial({uniforms:waterU,transparent:true,
+    vertexShader:'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader:'uniform float t; varying vec2 vUv; void main(){ float s=sin(vUv.x*180.-t*3.+sin(vUv.y*9.+t)*2.)*.5+.5; vec3 c=mix(vec3(.05,.2,.4),vec3(.3,.7,1.),s*s*.6); c+=vec3(.6,.9,1.)*smoothstep(.97,1.,s)*.5; gl_FragColor=vec4(c,.88); }'}));
+  w.rotation.x=-Math.PI/2; w.position.set(0,-.42,-4); forest.add(w); }
+FRECT.push({x1:-40,z1:-5.15,x2:5.05,z2:-2.85,on:true},{x1:6.95,z1:-5.15,x2:40,z2:-2.85,on:true});
+{ const wood=M(0x6b4a2e,{r:.8}); for(let i=0;i<11;i++){ const z=-6.1+i*.42; const y=walkH(6,z)-.06; B(2,.1,.38,wood,6,y,z,forest); }
+  for(const x of [5,7]){ for(let i=0;i<5;i++){ const z=-6+i*1; CY(.05,.05,.8,wood,x,walkH(6,z)+.35,z,forest,6); } const rail=B(.06,.06,4.3,wood,x,.95,-4,forest); } }
+// árboles (instanciados)
+const TREES=[];
+function addTree(x,z,s,col){ TREES.push({x,z,s,r:rnd()*6.28}); if(col) FCIRC.push({x,z,r:.42*s}); }
+for(let i=0;i<90;i++){ const a=i/90*6.28+rnd()*.05, r=24.5+rnd()*4; addTree(Math.cos(a)*r,-5+Math.sin(a)*r,1.1+rnd()*.8,false); }
+for(let x=-26;x<=26;x+=1.5){ if(Math.abs(x)<3) continue; addTree(x+rnd()*.4,-14+(rnd()-.5)*.8,1+rnd()*.6,false); }
+FRECT.push({x1:-40,z1:-14.7,x2:-2.2,z2:-13.3,on:true},{x1:2.2,z1:-14.7,x2:40,z2:-13.3,on:true});
+const BELLS=[{n:'I',k:'verde',x:9,z:9},{n:'II',k:'rosa',x:-12,z:0},{n:'III',k:'azul',x:11,z:-10},{n:'IV',k:'amarillo',x:-8,z:-10}];
+const avoid=(x,z)=>Math.hypot(x,z-10)<6||Math.abs(z+4)<2.6||Math.hypot(x+6,z-4)<3||Math.hypot(x,z+21)<6||Math.abs(z+14)<2||(Math.abs(x)<2.5&&z<0&&z>-14)||(Math.abs(x-6)<2.5&&z<-1&&z>-8)||BELLS.some(b=>Math.hypot(x-b.x,z-b.z)<2.5);
+for(let i=0;i<300&&TREES.length<185;i++){ const x=(rnd()-.5)*44, z=-5+(rnd()-.5)*44; if(Math.hypot(x,z+5)>22.5||avoid(x,z)) continue; if(TREES.some(t=>Math.hypot(t.x-x,t.z-z)<2.4)) continue; addTree(x,z,.9+rnd()*.7,true); }
+{ const trunkG=new THREE.CylinderGeometry(.16,.28,2.2,7); trunkG.translate(0,1.1,0);
+  const cones=[[1.35,1.9,2.4],[1.05,1.6,3.25],[.72,1.3,4]].map(([r,h,y])=>{ const g=new THREE.ConeGeometry(r,h,8); g.translate(0,y,0); return g; });
+  const trunks=new THREE.InstancedMesh(trunkG,M(0x3d2a1e,{r:.9}),TREES.length); forest.add(trunks);
+  const leafM=M(0xffffff,{r:.85,env:.25,e:0x0c2a24,ei:1}); const leaves=cones.map(g=>{ const im=new THREE.InstancedMesh(g,leafM,TREES.length); forest.add(im); return im; });
+  const m=new THREE.Matrix4(), q=new THREE.Quaternion(), c=new THREE.Color();
+  TREES.forEach((t,i)=>{ q.setFromAxisAngle(new THREE.Vector3(0,1,0),t.r); m.compose(new THREE.Vector3(t.x,hG(t.x,t.z)-.05,t.z),q,new THREE.Vector3(t.s,t.s,t.s)); trunks.setMatrixAt(i,m);
+    c.setHSL(.42+rnd()*.08,.45,.18+rnd()*.08); leaves.forEach(l=>{ l.setMatrixAt(i,m); l.setColorAt(i,c); }); }); }
+// hongos brillantes decorativos
+{ const n=70, stemG=new THREE.CylinderGeometry(.03,.04,.18,6); stemG.translate(0,.09,0); const capG=new THREE.SphereGeometry(.1,10,6,0,6.28,0,Math.PI/2); capG.translate(0,.17,0);
+  const stems=new THREE.InstancedMesh(stemG,M(0xe8e0d0,{r:.8}),n), caps=new THREE.InstancedMesh(capG,new THREE.MeshBasicMaterial({color:0xffffff}),n); forest.add(stems,caps);
+  const m=new THREE.Matrix4(), c=new THREE.Color(); const cols=[0x5ff0ff,0xff7ee0,0x9dff7a,0xb98bff];
+  for(let i=0;i<n;i++){ let x,z; do{ x=(rnd()-.5)*44; z=-5+(rnd()-.5)*44; }while(Math.hypot(x,z+5)>23||Math.abs(z+4)<2.4); const s=.7+rnd()*1.3;
+    m.makeScale(s,s,s).setPosition(x,hG(x,z),z); stems.setMatrixAt(i,m); caps.setMatrixAt(i,m); caps.setColorAt(i,c.set(cols[i%4])); } }
+// rocas
+{ const rm=M(0x55606a,{r:.9}); for(let i=0;i<22;i++){ let x,z; do{ x=(rnd()-.5)*42; z=-5+(rnd()-.5)*42; }while(avoid(x,z)||Math.hypot(x,z+5)>22); const s=.3+rnd()*.6;
+  const r=new THREE.Mesh(new THREE.IcosahedronGeometry(s,0),rm); r.position.set(x,hG(x,z)+s*.3,z); r.rotation.set(rnd(),rnd(),rnd()); forest.add(r); if(s>.5) FCIRC.push({x,z,r:s*.9}); } }
+// luciérnagas
+const flyN=240, flyBase=[];
+const flies=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({map:dotTex,size:.16,color:0xe4ff8a,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+{ const a=[]; for(let i=0;i<flyN;i++){ const x=(rnd()-.5)*44, z=-5+(rnd()-.5)*44, y=hG(x,z)+.4+rnd()*2.5; a.push(x,y,z); flyBase.push([x,y,z,rnd()*6.28,.3+rnd()*.6]); }
+  flies.geometry.setAttribute('position',new THREE.Float32BufferAttribute(a,3)); forest.add(flies); }
+// cartel de bienvenida + farol
+{ const g=new THREE.Group(); g.position.set(-1.8,hG(-1.8,12.5),12.5); g.rotation.y=.4; forest.add(g); const wood=M(0x7a5434,{r:.8});
+  CY(.06,.07,1.4,wood,0,.7,0,g,8); const st=ctex(256,128,c=>{ c.fillStyle='#8a6440'; c.fillRect(0,0,256,128); c.strokeStyle='#5a3e26'; c.lineWidth=6; c.strokeRect(3,3,250,122); c.fillStyle='#fff3d6'; c.font='700 30px Caveat'; c.textAlign='center'; c.fillText('Bosque de los',128,52); c.fillText('Susurros 🌲',128,92); });
+  const sg=new THREE.Mesh(new THREE.BoxGeometry(1,.5,.06),[wood,wood,wood,wood,M(0xffffff,{map:st,r:.8}),wood]); sg.position.y=1.35; g.add(sg); fact(g,'cartel',new THREE.Vector3(-1.8,hG(-1.8,12.5)+1.9,12.5)); }
+const lantern=new THREE.PointLight(0xffb45a,3,9,1.8); lantern.position.set(1.6,hG(1.6,12)+1.6,12); forest.add(lantern);
+{ const wood=M(0x2a2a2a,{m:.6,r:.4}); CY(.04,.05,1.5,wood,1.6,hG(1.6,12)+.75,12,forest,8); const gl=new THREE.Mesh(new THREE.SphereGeometry(.12,12,8),new THREE.MeshBasicMaterial({color:0xffd08a})); gl.position.set(1.6,hG(1.6,12)+1.6,12); forest.add(gl); }
+// árbol del búho
+const owlTree=new THREE.Group(); owlTree.position.set(-6,hG(-6,4)-.05,4); forest.add(owlTree); FCIRC.push({x:-6,z:4,r:.85});
+{ const bark=M(0x4a3222,{r:.9}); CY(.45,.7,5,bark,0,2.5,0,owlTree,10); const br=CY(.13,.18,2.2,bark,1.1,3.1,0,owlTree,8); br.rotation.z=Math.PI/2.4;
+  const lf=M(0x24584a,{r:.85,e:0x0c2a24,ei:1}); for(const [x,y,z,s] of [[0,6.9,0,2.4],[1.4,6.4,.7,1.5],[-1.1,6.5,-.5,1.8],[.4,7.9,0,1.6]]){ const b=new THREE.Mesh(new THREE.IcosahedronGeometry(s,1),lf); b.position.set(x,y,z); owlTree.add(b); } }
+const owl=new THREE.Group(); owl.position.set(-4.9,hG(-6,4)+3.55,4); forest.add(owl);
+const owlEyes=[];
+{ const fm=M(0x8a6040,{r:.8}), bm=M(0xd8b88a,{r:.9}); const body=new THREE.Mesh(new THREE.SphereGeometry(.32,20,14),fm); body.scale.set(1,1.25,.9); owl.add(body);
+  const belly=new THREE.Mesh(new THREE.SphereGeometry(.24,16,12),bm); belly.position.set(0,-.06,.14); belly.scale.set(1,1.2,.6); owl.add(belly);
+  const head=new THREE.Group(); head.position.y=.42; owl.add(head); owl.userData.head=head;
+  const hd=new THREE.Mesh(new THREE.SphereGeometry(.26,20,14),fm); hd.scale.set(1.15,1,1); head.add(hd);
+  for(const s of [-1,1]){ const ew=new THREE.Mesh(new THREE.SphereGeometry(.1,16,12),M(0xffd23b,{e:0xffb000,ei:.6})); ew.position.set(s*.11,.03,.2); head.add(ew);
+    const pu=new THREE.Mesh(new THREE.SphereGeometry(.05,12,8),M(0x111111)); pu.position.set(s*.11,.03,.29); head.add(pu); owlEyes.push(ew,pu);
+    const tuft=new THREE.Mesh(new THREE.ConeGeometry(.06,.2,6),fm); tuft.position.set(s*.17,.24,0); tuft.rotation.z=-s*.4; head.add(tuft);
+    const wing=new THREE.Mesh(new THREE.SphereGeometry(.16,12,8),fm); wing.scale.set(.4,1.1,.8); wing.position.set(s*.3,-.02,0); owl.add(wing); }
+  const beak=new THREE.Mesh(new THREE.ConeGeometry(.04,.1,6),M(0xe8a030)); beak.position.set(0,-.06,.27); beak.rotation.x=Math.PI/1.8; head.add(beak); }
+fact(owl,'buho',new THREE.Vector3(-4.9,hG(-6,4)+4.3,4));
+// campanas de cristal
+const FL=[{k:'rosa',c:0xff7eb6,f:523.25,e:'🌸'},{k:'naranja',c:0xff9a3c,f:587.33,e:'🟠'},{k:'amarillo',c:0xffd23b,f:659.25,e:'🟡'},{k:'verde',c:0x5be38a,f:783.99,e:'🟢'},{k:'azul',c:0x5aa8ff,f:880,e:'🔵'},{k:'morado',c:0xb57bff,f:1046.5,e:'🟣'}];
+const flk=k=>FL.find(n=>n.k===k);
+const SONG=BELLS.map(b=>b.k);
+const bellObjs=[];
+BELLS.forEach((b,i)=>{ const g=new THREE.Group(); g.position.set(b.x,hG(b.x,b.z)-.05,b.z); g.rotation.y=Math.atan2(-b.x,10-b.z); forest.add(g); FCIRC.push({x:b.x,z:b.z,r:.3});
+  const wood=M(0x6b4a2e,{r:.85}); CY(.07,.09,2.3,wood,0,1.15,0,g,8); const arm=B(.8,.08,.08,wood,.36,2.2,0,g);
+  const pivot=new THREE.Group(); pivot.position.set(.65,2.16,0); g.add(pivot);
+  const pts=[[0,0],[.04,0],[.06,-.05],[.09,-.16],[.13,-.3],[.2,-.42],[.22,-.45],[0,-.45]].map(([x,y])=>new THREE.Vector2(x,y));
+  const col=flk(b.k).c; const bm=M(col,{r:.1,m:.2,tr:true,op:.8,e:col,ei:.55,env:1.5,side:THREE.DoubleSide}); const bell=new THREE.Mesh(new THREE.LatheGeometry(pts,24),bm); pivot.add(bell);
+  const clap=new THREE.Mesh(new THREE.SphereGeometry(.04,10,8),M(0xffffff,{e:col,ei:1})); clap.position.y=-.42; pivot.add(clap);
+  const gl=new THREE.PointLight(col,1.2,3.5,2); gl.position.set(.65,1.8,0); g.add(gl);
+  const nt=ctex(128,128,c=>{ c.fillStyle='#5a3e26'; c.beginPath(); c.arc(64,64,60,0,7); c.fill(); c.strokeStyle='#d9b25a'; c.lineWidth=6; c.stroke(); c.fillStyle='#ffe7a8'; c.font='700 60px Georgia'; c.textAlign='center'; c.fillText(b.n,64,84); });
+  const plaque=new THREE.Mesh(new THREE.CircleGeometry(.2,24),M(0xffffff,{map:nt,r:.8})); plaque.position.set(0,1.25,.1); g.add(plaque);
+  const back=plaque.clone(); back.position.z=-.1; back.rotation.y=Math.PI; g.add(back);
+  bellObjs.push({g,pivot,bell}); fact(g,'campana'+i,new THREE.Vector3(b.x,hG(b.x,b.z)+2.7,b.z)); });
+// espinas mágicas
+const thorns=new THREE.Group(); thorns.position.set(0,hG(0,-14),-14); forest.add(thorns);
+const thornRect={x1:-2.3,z1:-14.6,x2:2.3,z2:-13.4,on:true}; FRECT.push(thornRect);
+{ const vm=M(0x5a1e4a,{r:.6,e:0x8a1a6a,ei:.5}), sm=M(0x2a0a20,{r:.5});
+  for(let i=0;i<16;i++){ const curve=new THREE.CatmullRomCurve3(Array.from({length:6},(_,k)=>new THREE.Vector3(-2.3+k*.92,.2+rnd()*2.4,(rnd()-.5)*.6)));
+    const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,40,.05+rnd()*.04,6),vm); thorns.add(tube);
+    for(let k=0;k<10;k++){ const p=curve.getPoint(rnd()); const sp=new THREE.Mesh(new THREE.ConeGeometry(.03,.16,5),sm); sp.position.copy(p); sp.rotation.set(rnd()*6,rnd()*6,rnd()*6); thorns.add(sp); } }
+  for(let i=0;i<12;i++){ const fl=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:0xff4fd0,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false})); fl.position.set(-2+rnd()*4,.3+rnd()*2.2,(rnd()-.5)*.5); fl.scale.setScalar(.15); thorns.add(fl); } }
+const thornHit=B(4.6,2.8,1,new THREE.MeshBasicMaterial({visible:false}),0,1.4,0,thorns); fact(thornHit,'espinas',new THREE.Vector3(0,hG(0,-14)+3,-13.6));
+const thornLight=new THREE.PointLight(0xff4fd0,2,6,2); thornLight.position.set(0,hG(0,-14)+1.5,-13); forest.add(thornLight);
+// círculo de las hadas
+const RING=new THREE.Vector3(0,hG(0,-21),-21);
+const ringLight=new THREE.PointLight(0xff9ad8,2,10,1.8); ringLight.position.set(0,RING.y+2.2,-21); forest.add(ringLight);
+{ const st=CY(.5,.6,.45,M(0x6b4a2e,{r:.9}),0,RING.y+.2,-21,forest,14); FCIRC.push({x:0,z:-21,r:.6});
+  const top=new THREE.Mesh(new THREE.CircleGeometry(.5,24),M(0xc9a27a,{r:.9})); top.rotation.x=-Math.PI/2; top.position.set(0,RING.y+.43,-21); forest.add(top); }
+const MUSH=[]; const MCOL=[0xff7eb6,0xff9a3c,0xffd23b,0x5be38a,0x5aa8ff,0xb57bff];
+for(let i=0;i<6;i++){ const a=i/6*6.28-Math.PI/2; const x=Math.cos(a)*2.5, z=-21+Math.sin(a)*2.5; const g=new THREE.Group(); g.position.set(x,hG(x,z),z); forest.add(g); FCIRC.push({x,z,r:.4});
+  CY(.12,.17,.6,M(0xf2ead8,{r:.8}),0,.3,0,g,10);
+  const capM=M(MCOL[i],{r:.4,e:MCOL[i],ei:.15}); const cap=new THREE.Mesh(new THREE.SphereGeometry(.5,24,12,0,6.28,0,Math.PI/2),capM); cap.position.y=.55; cap.scale.y=.7; g.add(cap);
+  for(let k=0;k<5;k++){ const d=new THREE.Mesh(new THREE.SphereGeometry(.05,8,6),M(0xffffff,{r:.6})); const aa=k*1.26, rr=.28; d.position.set(Math.cos(aa)*rr,.55+.27,Math.sin(aa)*rr); g.add(d); }
+  const hit=B(1.1,1.1,1.1,new THREE.MeshBasicMaterial({visible:false}),0,.5,0,g); hit.userData.mush=i;
+  MUSH.push({g,cap,capM,hit,f:FL[i].f}); }
+// hadas
+const fairies=[];
+for(let i=0;i<6;i++){ const g=new THREE.Group(); forest.add(g);
+  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:MCOL[i],transparent:true,blending:THREE.AdditiveBlending,depthWrite:false})); glow.scale.setScalar(.45); g.add(glow);
+  const core=new THREE.Mesh(new THREE.SphereGeometry(.05,10,8),new THREE.MeshBasicMaterial({color:0xffffff})); g.add(core);
+  const wings=[]; for(const s of [-1,1]){ const w=new THREE.Mesh(new THREE.CircleGeometry(.09,12),new THREE.MeshBasicMaterial({color:0xe8f4ff,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false})); w.scale.set(1,1.6,1); w.position.x=s*.08; g.add(w); wings.push(w); }
+  fairies.push({g,glow,wings,ph:i/6*6.28}); }
+const queen=new THREE.Group(); queen.position.set(0,RING.y+1.3,-21); forest.add(queen);
+{ const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:0xffe8ff,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false})); glow.scale.setScalar(1.1); queen.add(glow); queen.userData.glow=glow;
+  const body=new THREE.Mesh(new THREE.ConeGeometry(.1,.3,12),M(0xffc8f0,{e:0xff8ad8,ei:.6})); body.position.y=-.05; queen.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.07,12,10),M(0xffe0d0,{e:0x553333,ei:.2})); head.position.y=.15; queen.add(head);
+  const crown=new THREE.Mesh(new THREE.TorusGeometry(.05,.012,6,12),M(0xffd23b,{m:.8,r:.3,e:0xaa8800,ei:.5})); crown.position.y=.23; crown.rotation.x=Math.PI/2; queen.add(crown);
+  queen.userData.wings=[]; for(const s of [-1,1]){ const w=new THREE.Mesh(new THREE.CircleGeometry(.16,14),new THREE.MeshBasicMaterial({color:0xf0e0ff,transparent:true,opacity:.6,side:THREE.DoubleSide,depthWrite:false})); w.scale.set(1,1.7,1); w.position.set(s*.15,.05,-.03); w.rotation.y=s*.5; queen.add(w); queen.userData.wings.push(w); } }
+fact(queen,'reina',new THREE.Vector3(0,RING.y+1.95,-21));
+// los oídos de J
+const ears=new THREE.Group(); ears.position.set(0,RING.y+1.1,-21); ears.visible=false; forest.add(ears);
+{ const sk=M(0xf2b8a0,{r:.5,e:0x553028,ei:.25}), inner=M(0xd98a7a,{r:.6});
+  for(const s of [-1,1]){ const e=new THREE.Group(); e.position.x=s*.32; e.scale.x=s; ears.add(e);
+    const outer=new THREE.Mesh(new THREE.TorusGeometry(.16,.055,12,28,Math.PI*1.45),sk); outer.rotation.z=-Math.PI*.2; e.add(outer);
+    const lobe=new THREE.Mesh(new THREE.SphereGeometry(.07,14,10),sk); lobe.position.set(.02,-.19,0); e.add(lobe);
+    const in1=new THREE.Mesh(new THREE.TorusGeometry(.08,.03,10,20,Math.PI*1.2),inner); in1.rotation.z=-Math.PI*.1; in1.position.set(.02,.01,.02); e.add(in1);
+    const fill=new THREE.Mesh(new THREE.CircleGeometry(.15,20),inner); fill.position.z=-.02; e.add(fill); }
+  const gl=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:0xffd0e8,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false})); gl.scale.setScalar(1.8); ears.add(gl); }
+fact(ears,'oidos',new THREE.Vector3(0,RING.y+1.9,-21));
+// portales
+const backPortalF=makePortal(forest,0x4fe08a); backPortalF.scale.set(.6,.85,1); backPortalF.position.set(0,hG(0,16)+1.05,16); fact(backPortalF,'volverEsp');
+const seaPortal=makePortal(forest,0x3aa8ff); seaPortal.scale.set(.8,1.1,1); seaPortal.position.set(0,hG(0,-25)+1.3,-25.2); seaPortal.visible=false; fact(seaPortal,'portal3',new THREE.Vector3(0,hG(0,-25)+2.6,-25.2));
+
+// ---------- jugador en el bosque ----------
+function placeForestStart(restore){
+  if(restore&&S.fp){ FP.x=S.fp[0]; FP.z=S.fp[1]; yaw=S.fp[2]; } else { FP.x=0; FP.z=14; yaw=0; pitch=-.05; }
+  camera.position.set(FP.x,walkH(FP.x,FP.z)+1.6,FP.z); camera.rotation.set(pitch,yaw,0);
+}
+function forestCollide(p){ const R=.3;
+  for(const c of FCIRC){ const dx=p.x-c.x, dz=p.z-c.z, d=Math.hypot(dx,dz), m=c.r+R; if(d<m&&d>1e-6){ p.x=c.x+dx/d*m; p.z=c.z+dz/d*m; } }
+  for(const r of FRECT){ if(!r.on) continue; const qx=Math.max(r.x1,Math.min(p.x,r.x2)), qz=Math.max(r.z1,Math.min(p.z,r.z2)); const dx=p.x-qx, dz=p.z-qz, d2=dx*dx+dz*dz;
+    if(d2<R*R){ if(d2>1e-9){ const d=Math.sqrt(d2); p.x=qx+dx/d*R; p.z=qz+dz/d*R; } else { const o=[[p.x-r.x1,-1,0],[r.x2-p.x,1,0],[p.z-r.z1,0,-1],[r.z2-p.z,0,1]].sort((a,b)=>a[0]-b[0])[0]; if(o[1]) p.x=o[1]<0?r.x1-R:r.x2+R; else p.z=o[2]<0?r.z1-R:r.z2+R; } } }
+  const dx=p.x, dz=p.z+5, d=Math.hypot(dx,dz); if(d>23.5){ p.x=dx/d*23.5; p.z=-5+dz/d*23.5; }
+  if(p.z>17) p.z=17; }
+function forestStep(dt,mx,my,l){
+  if(l>.05){ const s=2.6*dt, fx=-Math.sin(yaw), fz=-Math.cos(yaw), rx=Math.cos(yaw), rz=-Math.sin(yaw); const p={x:FP.x+(fx*my+rx*mx)*s, z:FP.z+(fz*my+rz*mx)*s}; forestCollide(p); FP.x=p.x; FP.z=p.z;
+    bob+=dt*9*l; stepT+=dt*l; if(stepT>.45){ stepT=0; sfx('step'); } }
+  camera.position.set(FP.x,walkH(FP.x,FP.z)+1.6+Math.sin(bob)*.025,FP.z); camera.rotation.set(pitch,yaw,0);
+  if(seaPortal.visible&&Math.hypot(FP.x-seaPortal.position.x,FP.z-seaPortal.position.z)<.8) doAct('portal3');
+  if(Math.hypot(FP.x-backPortalF.position.x,FP.z-backPortalF.position.z)<.55) doAct('volverEsp');
+}
+function updateForest(dt,T){
+  waterU.t.value=T; backPortalF.userData.u.t.value=T; seaPortal.userData.u.t.value=T;
+  { const a=flies.geometry.attributes.position; for(let i=0;i<flyN;i++){ const b=flyBase[i]; a.setXYZ(i,b[0]+Math.sin(T*b[4]+b[3])*.6,b[1]+Math.sin(T*b[4]*1.3+b[3]*2)*.3,b[2]+Math.cos(T*b[4]*.8+b[3])*.6); } a.needsUpdate=true; flies.material.opacity=.7+Math.sin(T*3)*.3; }
+  lantern.intensity=3*(1+Math.sin(T*9)*.06);
+  { const h=owl.userData.head; const dx=camera.position.x-owl.position.x, dz=camera.position.z-owl.position.z; h.rotation.y=Math.max(-1.2,Math.min(1.2,Math.atan2(dx,dz))); const bl=(T%4)<.15?.15:1; owlEyes.forEach(e=>e.scale.y=bl); owl.position.y=hG(-6,4)+3.55+Math.sin(T*1.5)*.015; }
+  bellObjs.forEach((b,i)=>{ if(!b.swing) b.pivot.rotation.z=Math.sin(T*1.2+i)*.04; });
+  thorns.children.forEach((c,i)=>{ if(c.isSprite) c.material.opacity=.5+Math.sin(T*3+i)*.4; });
+  const awake=S.f.espinas;
+  fairies.forEach((f,i)=>{ const a=f.ph+T*(awake?.6:.15); const r=awake?(S.f.simon?.9:1.6):2.5; const y=awake?RING.y+1+Math.sin(T*2+i)*.3:RING.y+1.1;
+    if(S.f.simon&&!S.f.oidos){ const t=a; f.g.position.set(16*Math.pow(Math.sin(t),3)*.06,RING.y+1.6+(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))*.06,-21+.1); }
+    else f.g.position.set(Math.cos(a)*r,y,-21+Math.sin(a)*r);
+    f.glow.material.opacity=awake?.9:.35+Math.sin(T+i)*.15; f.wings.forEach((w,k)=>w.rotation.y=(k?1:-1)*(.3+Math.sin(T*(awake?30:6)+i)*.5)); f.g.lookAt(camera.position); });
+  queen.position.y=RING.y+(S.f.simon?2.4:1.3)+Math.sin(T*1.6)*.08; queen.userData.wings.forEach((w,k)=>w.rotation.y=(k?1:-1)*(.5+Math.sin(T*(S.f.espinas?18:3))*.4)); queen.userData.glow.material.opacity=S.f.espinas?1:.45;
+  if(!(focus==='mush')) queen.lookAt(camera.position.x,queen.position.y,camera.position.z);
+  if(ears.visible&&!busy){ ears.position.y=RING.y+1.1+Math.sin(T*1.8)*.08; ears.rotation.y=Math.sin(T*.8)*.5; }
+  if(seaPortal.visible&&Math.random()<.4) emit(seaPortal.position.clone().add(new THREE.Vector3((Math.random()-.5)*1.4,(Math.random()-.5)*2,.1)),{color:0x7ac8ff,vel:[0,.3,.4],spread:.3,life:1.2,size:.05});
+  if(Math.random()<.05) emit(new THREE.Vector3((Math.random()-.5)*4,RING.y+.6+Math.random(),-21+(Math.random()-.5)*4),{color:MCOL[Math.floor(Math.random()*6)],vel:[0,.25,0],spread:.15,life:1.6,size:.04});
+}
+function goBosque(){ switchWorld('bosque',()=>placeForestStart(false),()=>{ if(!S.f.llegoBosque){ S.f.llegoBosque=1; save();
+  say('🌲 ¡Llegaste al Bosque Mágico!','Es de noche y todo brilla… En este bosque <b>todo se escucha</b>: el río, los grillos, las hadas.<br><br>Dicen que mis <b>oídos</b> 👂 están escondidos donde cantan las hadas. Habla con el <b>búho</b> del árbol grande, él sabe todo.'); } }); }
+function forestHint(){
+  if(!S.f.owl) return 'Habla con el búho que está en la rama del árbol grande (a la izquierda cuando llegas). Te va a poner una adivinanza.';
+  if(!S.f.espinas){ const n=[0,1,2,3].filter(i=>S.f['bell'+i]).length;
+    if(n<4) return `Busca las 4 campanas de cristal (llevas ${n}). Cada una tiene un número romano (I, II, III, IV) y suena con un color. Dos están del otro lado del río: cruza por el puente.`;
+    return 'Ve a las espinas del norte y tócalas. Con la flauta, toca los colores de las campanas en orden: I → II → III → IV.'; }
+  if(!S.f.simon) return 'Toca a la reina de las hadas (en el centro del círculo de hongos) y repite la canción que tocan los hongos.';
+  if(!S.f.oidos) return '¡Mis oídos están flotando en el centro del círculo! Tócalos.';
+  return 'Entra al portal azul que está detrás del círculo de las hadas.';
+}
+// ---------- flauta ----------
+const hex=c=>'#'+c.toString(16).padStart(6,'0');
+function openFlute(atThorns){
+  let played=[];
+  modal(`<h2>🎵 Flauta mágica</h2><p>${atThorns?'Toca la canción de las campanas para abrir las espinas…':'Suena bonito… pero aquí no pasa nada.'}</p>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:14px 0">${FL.map((n,i)=>`<button data-n="${i}" style="width:64px;height:64px;border-radius:50%;border:3px solid #ffffff66;background:radial-gradient(#fff8,${hex(n.c)} 60%);box-shadow:0 0 16px ${hex(n.c)};cursor:pointer"></button>`).join('')}</div>
+    <div id="flp" style="min-height:30px;font-size:26px;letter-spacing:4px"></div><button class="btn sec" onclick="closeModal()">Guardar flauta</button>`,b=>{
+    b.querySelectorAll('[data-n]').forEach(x=>x.onclick=()=>{ const n=FL[+x.dataset.n]; note(n.f,.7); x.animate([{transform:'scale(.85)'},{transform:'scale(1)'}],{duration:220});
+      played.push(n.k); played=played.slice(-4); b.querySelector('#flp').innerHTML=played.map(k=>`<span style="color:${hex(flk(k).c)};text-shadow:0 0 8px ${hex(flk(k).c)}">●</span>`).join('');
+      if(atThorns&&!S.f.espinas&&played.join()===SONG.join()){ S.f.espinas=1; save(); setTimeout(()=>{ closeModal(); openThorns(true); },600); }
+      else if(atThorns&&played.length===4&&played.join()!==SONG.join()){ b.querySelector('#flp').style.opacity=.5; setTimeout(()=>{ const e=b.querySelector('#flp'); if(e) e.style.opacity=1; },300); } });
+  });
+}
+function openThorns(animate){ thornRect.on=false; thornHit.visible=false;
+  if(!animate){ thorns.visible=false; thornLight.intensity=0; return; }
+  sfx('magic'); [0,2,4].forEach((k,i)=>setTimeout(()=>note(FL[k].f,.8),i*180));
+  anim(1.8,t=>{ const k=ease(t); thorns.scale.set(1+k*.3,1-k,1+k*.3); thorns.position.y=hG(0,-14)-k*.5; thornLight.intensity=2*(1-k); },()=>{ thorns.visible=false; });
+  for(let i=0;i<60;i++) emit(new THREE.Vector3((Math.random()-.5)*4,hG(0,-14)+Math.random()*2.5,-14),{color:i%2?0xff4fd0:0xffffff,vel:[0,.8,.4],spread:1.2,life:1.5,size:.07});
+  setTimeout(()=>say('🌿 ¡Las espinas se abrieron!','La canción de las campanas hizo que las espinas se escondieran. Al otro lado se ve un círculo de hongos brillantes… y algo que se mueve. 🧚'),1900);
+}
+// ---------- Simón dice de los hongos ----------
+const ROUNDS=[[2,4,1,5],[0,3,5,2,4],[5,1,3,0,4,2]];
+const simon={round:0,idx:0,busy:false};
+function lightMush(i){ const m=MUSH[i]; note(m.f,.55); m.capM.emissiveIntensity=2.2;
+  anim(.45,t=>{ m.capM.emissiveIntensity=.15+2.05*(1-t); m.cap.scale.set(1+.15*Math.sin(t*Math.PI),.7+.12*Math.sin(t*Math.PI),1+.15*Math.sin(t*Math.PI)); });
+  for(let k=0;k<10;k++) emit(m.g.position.clone().add(new THREE.Vector3(0,.8,0)),{color:MCOL[i],vel:[0,1,0],spread:.8,life:.7,size:.06}); }
+function fHelp(t){ $('#focusHelp').innerHTML=t; }
+function simonPlay(){ simon.busy=true; simon.idx=0; const seq=ROUNDS[simon.round]; fHelp(`🎶 Escucha la canción… (ronda ${simon.round+1}/3)`);
+  seq.forEach((m,i)=>setTimeout(()=>{ if(focus==='mush') lightMush(m); },1000+i*700));
+  setTimeout(()=>{ if(focus!=='mush') return; simon.busy=false; fHelp(`👆 Ahora tú: toca los hongos en el mismo orden (ronda ${simon.round+1}/3)`); },1000+seq.length*700); }
+function tapMush(i){
+  if(simon.busy||S.f.simon) return; lightMush(i);
+  const seq=ROUNDS[simon.round];
+  if(seq[simon.idx]!==i){ sfx('bad'); simon.busy=true; fHelp('🙉 ¡Ups! Esa no era… escucha otra vez'); setTimeout(()=>{ if(focus==='mush') simonPlay(); },1400); return; }
+  simon.idx++;
+  if(simon.idx===seq.length){ simon.round++; simon.busy=true;
+    if(simon.round>=ROUNDS.length){ S.f.simon=1; save(); sfx('ok'); fHelp('✨ ¡Lo lograste! Las hadas están felices ✨');
+      setTimeout(()=>{ MUSH.forEach((m,k)=>setTimeout(()=>lightMush(k),k*120)); },500);
+      setTimeout(()=>{ exitFocus(); setTimeout(showEars,900); },2200); }
+    else { sfx('ok'); fHelp('💖 ¡Muy bien! Viene una canción más larga…'); setTimeout(()=>{ if(focus==='mush') simonPlay(); },1500); } }
+}
+function enterMushFocus(){
+  focus='mush'; busy=true; camSaved.pos.copy(camera.position); camSaved.q.copy(camera.quaternion);
+  const hfov=2*Math.atan(Math.tan(camera.fov*Math.PI/360)*camera.aspect); const d=Math.max(5,3.6/Math.tan(hfov/2));
+  const target=RING.clone().add(new THREE.Vector3(0,.4,0)), to=target.clone().add(new THREE.Vector3(0,.88,.48).normalize().multiplyScalar(d));
+  const m=new THREE.Matrix4().lookAt(to,target,new THREE.Vector3(0,1,0)), q2=new THREE.Quaternion().setFromRotationMatrix(m);
+  const p0=camera.position.clone(), q0=camera.quaternion.clone();
+  anim(1,t=>{ const k=ease(t); camera.position.lerpVectors(p0,to,k); camera.quaternion.slerpQuaternions(q0,q2,k); },()=>{ busy=false; simon.round=Math.min(simon.round,ROUNDS.length-1); simonPlay(); });
+  $('#exitFocus').style.display='block'; $('#exitFocus').textContent='✕ Salir'; $('#focusHelp').style.display='block'; $('#cross').style.display='none'; fHelp('🧚 La reina va a cantar…');
+}
+function showEars(){ ears.visible=true; ears.scale.setScalar(.01); sfx('magic');
+  anim(1.4,t=>ears.scale.setScalar(Math.max(.01,ease(t))));
+  for(let i=0;i<50;i++) emit(RING.clone().add(new THREE.Vector3(0,1.2,0)),{color:i%2?0xffd0e8:0xffffff,vel:[0,1,0],spread:2,life:1.4,size:.07});
+  toast('Las hadas te dejaron algo en el centro del círculo… 👂',3500); }
+function collectEars(){
+  if(S.f.oidos) return; S.f.oidos=1; if(!S.parts.includes('oidos')) S.parts.push('oidos'); save();
+  flyToCam(ears,()=>{ sfx('ok'); updHud();
+    modal(`<div style="font-size:54px">👂</div><h2>¡Encontraste mis oídos!</h2>
+      <div class="letter" style="text-align:center;font-size:26px">"Me encanta escucharte, aunque me hables de cualquier bobada. Tu voz es mi canción favorita."<br>— ${P.yo} ❤️</div>
+      <p>🧩 Partes de J: <b>${S.parts.length}/7</b></p><button class="btn" id="okEars">Seguir</button>`,b=>{
+      b.querySelector('#okEars').onclick=()=>{ closeModal(); seaPortal.visible=true; seaPortal.scale.set(.01,.01,1); anim(1.2,t=>seaPortal.scale.set(Math.max(.01,.8*ease(t)),Math.max(.01,1.1*ease(t)),1)); toast('Se abrió un portal azul detrás del círculo de las hadas 🌊',3500); }; });
+  });
+}
+Object.assign(ACT,{
+  cartel(){ S.f.cartel=1; save(); say('🪧 Bosque de los Susurros','«Aquí todo se escucha.<br>Quien sabe escuchar, encuentra lo que busca.»'); },
+  buho(){
+    if(S.f.owl) return say('🦉 El búho','¡Uuh, uuh! Busca las <b>4 campanas de cristal</b> (I, II, III, IV). Recuerda sus colores y tócalos con la flauta, en orden, frente a las espinas del norte.');
+    note(330,.5,.1); setTimeout(()=>note(262,.7,.1),350);
+    const ops=['El viento','El silencio','La sombra','Un secreto'];
+    modal(`<h2>🦉 El búho</h2><p>¡Uuh, uuh! Así que buscas los oídos de J… Para escuchar de verdad, primero hay que adivinar esto:</p>
+      <p style="font-size:20px;color:#ffe7a8"><b>«Si dices mi nombre,<br>desaparezco. ¿Quién soy?»</b></p>
+      <div id="ops">${ops.map(o=>`<button class="btn sec" style="display:block;width:100%;margin:8px 0" data-o="${o}">${o}</button>`).join('')}</div><p id="owlMsg" style="min-height:22px"></p>`,b=>{
+      b.querySelectorAll('[data-o]').forEach(x=>x.onclick=()=>{
+        if(x.dataset.o==='El silencio'){ S.f.owl=1; save(); sfx('ok');
+          modal(`<h2>🦉 ¡Exacto!</h2><p>Para escuchar de verdad, primero hay que hacer <b>silencio</b>. Toma esta <b>flauta mágica</b> 🎵</p>
+            <p>Las espinas del norte solo se abren con la canción de las <b>4 campanas de cristal</b> que están escondidas en el bosque. Cada una tiene un número: I, II, III y IV.</p>
+            <p>Escúchalas, recuerda sus colores… y tócalos en orden con la flauta. ¡Uuh, uuh!</p><button class="btn" id="okOwl">Gracias, búho</button>`,b2=>{ b2.querySelector('#okOwl').onclick=()=>{ closeModal(); give('flauta'); }; });
+        } else { sfx('bad'); x.disabled=true; x.style.opacity=.4; b.querySelector('#owlMsg').textContent=['¡Uuuh! No, no…','Piensa en lo que hay cuando nadie habla…','¡Uuh! Casi… pero no.'][Math.floor(Math.random()*3)]; } });
+    });
+  },
+  espinas(){ if(S.f.espinas) return; if(!has('flauta')) return toast('Unas espinas mágicas tapan el camino. Dicen que solo se abren con música… 🎶'); if(sel) useSel(); openFlute(true); },
+  reina(){ if(S.f.simon) return toast('La reina te sonríe ✨'); if(!S.f.espinas) return;
+    if(!S.f.reinaHablo){ S.f.reinaHablo=1; save(); modal(`<h2>🧚 La reina de las hadas</h2><p>¡Gracias por abrir el camino! Llevábamos años encerradas…</p><p>Los oídos de J los guardamos nosotras. Te los damos si repites <b>nuestra canción</b>: los hongos van a cantar y tú los tocas en el mismo orden.</p><p>Son <b>3 canciones</b>, cada una más larga. ¿Lista?</p><button class="btn" id="okQ">¡Lista!</button>`,b=>{ b.querySelector('#okQ').onclick=()=>{ closeModal(); enterMushFocus(); }; }); return; }
+    enterMushFocus(); },
+  oidos(){ collectEars(); },
+  volverEsp(){ if(switching) return; switchWorld('espacio',()=>{ SP.x=0; SP.z=-48.6; SP.y=PT.top+.3; SP.vy=0; SP.last=PT; yaw=Math.PI; pitch=-.05; }); },
+  portal3(){ if(switching||$('#fin').style.display==='flex') return; sfx('magic');
+    showFin(`<div style="font-size:64px">🌊</div><h2 style="margin:8px 0">¡Mundo 2 completo, ${P.apodo}!</h2>
+      <p style="color:#d9c8ff">🧩 Partes de J: <b>${S.parts.length}/7</b> · ⏱ <b>${fmt(S.t)}</b> · 💡 <b>${S.hints}</b></p>
+      <p style="color:#d9c8ff;max-width:320px">El portal azul te lleva <b>🌊 Bajo el Mar</b>, donde está escondida mi voz 🗣️.</p>
+      <p style="color:#9a88b8;font-size:14px">(Este mundo todavía se está construyendo ✨)</p><button class="btn sec" id="backF">Volver al bosque</button>`);
+    $('#backF').onclick=()=>{ $('#fin').style.display='none'; FP.x=0; FP.z=-23.4; yaw=0; }; },
+});
+BELLS.forEach((b,i)=>{ ACT['campana'+i]=()=>{ const o=bellObjs[i], n=flk(b.k); note(n.f,1.1); S.f['bell'+i]=1; save();
+  o.swing=true; anim(1.4,t=>{ o.pivot.rotation.z=Math.sin(t*Math.PI*6)*.5*(1-t); },()=>o.swing=false);
+  for(let k=0;k<14;k++) emit(o.bell.getWorldPosition(new THREE.Vector3()),{color:n.c,vel:[0,.6,0],spread:.9,life:1,size:.06});
+  toast(`🔔 Campana ${b.n} — sonó: ${n.e} ${n.k}`,3200); }; });
+ITEMS.flauta={e:'🎵',n:'Flauta mágica',d:'Te la dio el búho. Suena precioso.'};
+function applyForestState(){ if(S.f.espinas) openThorns(false); if(S.f.simon&&!S.f.oidos) ears.visible=true; if(S.f.oidos){ ears.visible=false; seaPortal.visible=true; } }
+applyForestState();
+Object.assign(window.G,{fstep:(n,mx,my)=>{ for(let i=0;i<n;i++) forestStep(1/60,mx,my,1); },goBosque:()=>goBosque(), get FP(){return FP}, tapMush:i=>tapMush(i), get simon(){return simon}, ftp:(x,z,y)=>{FP.x=x;FP.z=z;if(y!==undefined)yaw=y;}, flute:k=>{ const btn=[...document.querySelectorAll('[data-n]')].find(e=>FL[+e.dataset.n].k===k); btn&&btn.click(); }, mushScreen:i=>{ const v=MUSH[i].g.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,.5,0)).project(camera); const r=cvs.getBoundingClientRect(); return [r.left+(v.x+1)/2*r.width, r.top+(1-v.y)/2*r.height]; }});
 
 // ================== ESTADO INICIAL ==================
 function applyState(){
@@ -962,11 +1260,14 @@ function loop(){
   const dt=Math.min(.05,clock.getDelta()), T=clock.elapsedTime;
   for(let i=ANIMS.length-1;i>=0;i--){ const a=ANIMS[i]; a.t+=dt; const k=Math.min(1,a.t/a.dur); a.fn(k); if(k>=1){ ANIMS.splice(i,1); a.done&&a.done(); } }
   // movimiento
-  if(WORLD==='espacio') updateSpace(dt,T);
+  if(WORLD==='espacio') updateSpace(dt,T); if(WORLD==='bosque') updateForest(dt,T);
   const canMove=!focus&&!busy&&!modalOpen()&&S.started&&$('#fin').style.display!=='flex'&&$('#tele').style.display!=='flex'&&!switching;
   if(WORLD==='espacio'){ let mx=move.x, my=move.y;
     if(keys.w||keys.arrowup) my=1; if(keys.s||keys.arrowdown) my=-1; if(keys.a||keys.arrowleft) mx=-1; if(keys.d||keys.arrowright) mx=1;
     if(!canMove){ mx=my=0; jumpReq=false; } spaceStep(dt,mx,my,Math.min(1,Math.hypot(mx,my)));
+  } else if(WORLD==='bosque'){ if(canMove){ let mx=move.x, my=move.y;
+    if(keys.w||keys.arrowup) my=1; if(keys.s||keys.arrowdown) my=-1; if(keys.a||keys.arrowleft) mx=-1; if(keys.d||keys.arrowright) mx=1;
+    forestStep(dt,mx,my,Math.min(1,Math.hypot(mx,my))); }
   } else if(canMove){
     let mx=move.x, my=move.y;
     if(keys.w||keys.arrowup) my=1; if(keys.s||keys.arrowdown) my=-1; if(keys.a||keys.arrowleft) mx=-1; if(keys.d||keys.arrowright) mx=1;
@@ -995,7 +1296,7 @@ function loop(){
   renderer.render(activeScene(),camera);
 }
 camera.position.set(player.x,1.6,player.z); camera.rotation.set(pitch,yaw,0);
-if(WORLD==='espacio') placeSpaceStart(true);
+if(WORLD==='espacio') placeSpaceStart(true); if(WORLD==='bosque') placeForestStart(true);
 renderInv(); updHud(); loop();
 
 // ================== INTRO ==================
