@@ -221,7 +221,7 @@ function showLetter(){
 }
 
 // ================== 3D BASE ==================
-await Promise.race([Promise.all([document.fonts.load('40px Caveat'),document.fonts.load('600 40px Fredoka')]),new Promise(r=>setTimeout(r,2500))]).catch(()=>{});
+await Promise.race([Promise.all([document.fonts.load('40px Caveat'),document.fonts.load('700 40px Caveat'),document.fonts.load('600 40px Fredoka')]),new Promise(r=>setTimeout(r,2500))]).catch(()=>{});
 const stage=$('#stage');
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
@@ -1001,9 +1001,14 @@ const flies=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial
 { const a=[]; for(let i=0;i<flyN;i++){ const x=(rnd()-.5)*44, z=-5+(rnd()-.5)*44, y=hG(x,z)+.4+rnd()*2.5; a.push(x,y,z); flyBase.push([x,y,z,rnd()*6.28,.3+rnd()*.6]); }
   flies.geometry.setAttribute('position',new THREE.Float32BufferAttribute(a,3)); forest.add(flies); }
 // cartel de bienvenida + farol
-{ const g=new THREE.Group(); g.position.set(-1.8,hG(-1.8,12.5),12.5); g.rotation.y=.4; forest.add(g); const wood=M(0x7a5434,{r:.8});
-  CY(.06,.07,1.4,wood,0,.7,0,g,8); const st=ctex(256,128,c=>{ c.fillStyle='#8a6440'; c.fillRect(0,0,256,128); c.strokeStyle='#5a3e26'; c.lineWidth=6; c.strokeRect(3,3,250,122); c.fillStyle='#fff3d6'; c.font='700 30px Caveat'; c.textAlign='center'; c.fillText('Bosque de los',128,52); c.fillText('Susurros 🌲',128,92); });
-  const sg=new THREE.Mesh(new THREE.BoxGeometry(1,.5,.06),[wood,wood,wood,wood,M(0xffffff,{map:st,r:.8}),wood]); sg.position.y=1.35; g.add(sg); fact(g,'cartel',new THREE.Vector3(-1.8,hG(-1.8,12.5)+1.9,12.5)); }
+{ const SX=-1.15, SZ=10; const g=new THREE.Group(); g.position.set(SX,hG(SX,SZ),SZ); g.rotation.y=.12; forest.add(g); const wood=M(0x7a5434,{r:.8});
+  CY(.07,.08,1.3,wood,-.75,.65,0,g,8); CY(.07,.08,1.3,wood,.75,.65,0,g,8);
+  const st=ctex(512,256,c=>{ c.fillStyle='#a87c50'; c.fillRect(0,0,512,256); c.fillStyle='rgba(90,60,35,.25)'; for(let i=0;i<9;i++) c.fillRect(0,i*30+8,512,3);
+    c.strokeStyle='#5a3e26'; c.lineWidth=12; c.strokeRect(6,6,500,244); c.fillStyle='#fff6e0'; c.strokeStyle='#4a2e18'; c.lineWidth=6; c.textAlign='center'; c.font='700 64px Caveat';
+    c.strokeText('Bosque de los',256,105); c.fillText('Bosque de los',256,105); c.font='700 78px Caveat'; c.strokeText('Susurros',256,195); c.fillText('Susurros',256,195); });
+  const sg=new THREE.Mesh(new THREE.BoxGeometry(1.8,.9,.08),[wood,wood,wood,wood,M(0xffffff,{map:st,r:.8,e:0x3a2a1a,ei:.6}),wood]); sg.position.y=1.5; g.add(sg);
+  const sl=new THREE.PointLight(0xffd9a0,1.5,4,2); sl.position.set(0,2.2,.8); g.add(sl); FCIRC.push({x:SX-.75,z:SZ,r:.15},{x:SX+.75,z:SZ,r:.15});
+  fact(g,'cartel',new THREE.Vector3(SX,hG(SX,SZ)+2.2,SZ)); }
 const lantern=new THREE.PointLight(0xffb45a,3,9,1.8); lantern.position.set(1.6,hG(1.6,12)+1.6,12); forest.add(lantern);
 { const wood=M(0x2a2a2a,{m:.6,r:.4}); CY(.04,.05,1.5,wood,1.6,hG(1.6,12)+.75,12,forest,8); const gl=new THREE.Mesh(new THREE.SphereGeometry(.12,12,8),new THREE.MeshBasicMaterial({color:0xffd08a})); gl.position.set(1.6,hG(1.6,12)+1.6,12); forest.add(gl); }
 // árbol del búho
