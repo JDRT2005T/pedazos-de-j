@@ -34,7 +34,7 @@ header .room{flex:1;font-weight:600;font-size:15px;color:#e6dbff;text-shadow:0 1
 #focusHelp{position:absolute;left:50%;top:60px;transform:translateX(-50%);z-index:6;display:none;background:#000a;padding:8px 14px;border-radius:12px;font-size:14px;text-align:center;width:max-content;max-width:90%}
 #modal{position:fixed;inset:0;background:#07040ecc;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
 #modal.on{display:flex}
-.box{background:var(--panel);border:1px solid #4a3770;border-radius:20px;padding:18px;width:100%;max-width:420px;max-height:92vh;overflow:auto;text-align:center;animation:pop .22s ease}
+.box{background:var(--panel);border:1px solid #4a3770;border-radius:20px;padding:18px;width:100%;max-width:420px;max-height:92vh;max-height:88dvh;overflow:auto;-webkit-overflow-scrolling:touch;text-align:center;animation:pop .22s ease}
 @keyframes pop{from{transform:scale(.9);opacity:0}}
 .box h2{margin:0 0 10px;font-size:20px}
 .box p{margin:8px 0;line-height:1.45;color:#e8dcff}
@@ -106,8 +106,8 @@ const FRESH=()=>({started:false, inv:[], f:{}, t:0, hints:3, mir:Array(11).fill(
 let S=FRESH(), sel=null;
 if (/[?&]reset=1/.test(location.search)) { try{localStorage.removeItem(KEY)}catch(e){} }
 try{ const d=JSON.parse(localStorage.getItem(KEY)); if(d&&d.started) S=Object.assign(FRESH(),d); }catch(e){}
-let WORLD=S.world||'casa', SP=null; const activeScene=()=>WORLD==='espacio'?space:WORLD==='bosque'?forest:WORLD==='mar'?sea:scene;
-function save(){ S.pos=[+player.x.toFixed(2),+player.z.toFixed(2),+yaw.toFixed(2)]; if(SP&&WORLD==='espacio'&&SP.last) S.sp=[SP.x,SP.y,SP.z].map(v=>+v.toFixed(2)); if(WORLD==='bosque'&&typeof FP!=='undefined') S.fp=[FP.x,FP.z,yaw].map(v=>+v.toFixed(2)); if(WORLD==='mar'&&typeof MP!=='undefined') S.mp=[MP.x,MP.z,yaw].map(v=>+v.toFixed(2)); try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} }
+let WORLD=S.world||'casa', SP=null; const activeScene=()=>WORLD==='espacio'?space:WORLD==='bosque'?forest:WORLD==='mar'?sea:WORLD==='dulces'?candy:scene;
+function save(){ S.pos=[+player.x.toFixed(2),+player.z.toFixed(2),+yaw.toFixed(2)]; if(SP&&WORLD==='espacio'&&SP.last) S.sp=[SP.x,SP.y,SP.z].map(v=>+v.toFixed(2)); if(WORLD==='bosque'&&typeof FP!=='undefined') S.fp=[FP.x,FP.z,yaw].map(v=>+v.toFixed(2)); if(WORLD==='mar'&&typeof MP!=='undefined') S.mp=[MP.x,MP.z,yaw].map(v=>+v.toFixed(2)); if(WORLD==='dulces'&&typeof DP!=='undefined') S.dp=[...DP.safe,yaw].map(v=>+v.toFixed(2)); try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} }
 
 const ITEMS={
   carta:{e:'✉️',n:'Carta de J',d:'La carta que te dejé.'},
@@ -170,7 +170,7 @@ setInterval(()=>{ if(!S.started||$('#fin').style.display==='flex'||document.hidd
 function roomOf(z){ return z>-4?'entrada':z>-12?'espejos':'lab'; }
 const ROOMNAME={entrada:'🏠 La Entrada',espejos:'🪞 Cuarto de Espejos',lab:'🧪 Laboratorio'};
 function hintText(){
-  if(WORLD==='espacio') return spaceHint(); if(WORLD==='bosque') return forestHint(); if(WORLD==='mar') return seaHint();
+  if(WORLD==='espacio') return spaceHint(); if(WORLD==='bosque') return forestHint(); if(WORLD==='mar') return seaHint(); if(WORLD==='dulces') return dulcesHint();
   const f=S.f, r=roomOf(player.z);
   if(r==='entrada'){
     if(!f.carta) return 'Empieza por la carta que está en el piso. Busca los brillitos ✦.';
@@ -207,9 +207,9 @@ $('#menuBtn').onclick=()=>{
     });
   });
 };
-function updHud(){ $('#hintBtn').textContent='💡 '+S.hints; $('#timer').textContent='⏱ '+fmt(S.t); $('#roomName').textContent=WORLD==='espacio'?'🌌 El Espacio':WORLD==='bosque'?'🌲 Bosque Mágico':WORLD==='mar'?'🌊 Bajo el Mar':ROOMNAME[roomOf(player.z)];
+function updHud(){ $('#hintBtn').textContent='💡 '+S.hints; $('#timer').textContent='⏱ '+fmt(S.t); $('#roomName').textContent=WORLD==='espacio'?'🌌 El Espacio':WORLD==='bosque'?'🌲 Bosque Mágico':WORLD==='mar'?'🌊 Bajo el Mar':WORLD==='dulces'?'🍭 Mundo de Dulces':ROOMNAME[roomOf(player.z)];
   $('#parts').textContent='🧩 '+S.parts.length+'/7'; $('#parts').style.display=(S.parts.length||WORLD!=='casa')?'inline-block':'none';
-  $('#jumpBtn').style.display=WORLD==='espacio'?'block':'none'; }
+  $('#jumpBtn').style.display=(WORLD==='espacio'||WORLD==='dulces')?'block':'none'; }
 function showLetter(){
   modal(`<div class="letter">${P.apodo}:<br><br>
   Si estás leyendo esto es porque algo raro pasó… Me rompí en pedazos y quedé regado por mundos muy lejanos. 💔<br><br>
@@ -503,7 +503,7 @@ const touches={};
 const cvs=renderer.domElement;
 cvs.addEventListener('touchstart',e=>{ e.preventDefault(); if(!AC) sfx('tap');
   for(const t of e.changedTouches){ const left=t.clientX<innerWidth*.45&&!focus;
-    touches[t.identifier]={x0:t.clientX,y0:t.clientY,x:t.clientX,y:t.clientY,t0:performance.now(),joy:left,moved:0};
+    touches[t.identifier]={x0:t.clientX,y0:t.clientY,x:t.clientX,y:t.clientY,t0:e.timeStamp,joy:left,moved:0};
     if(left){ joy.style.display='block'; joy.style.left=t.clientX+'px'; joy.style.top=t.clientY+'px'; knob.style.transform=''; } } },{passive:false});
 cvs.addEventListener('touchmove',e=>{ e.preventDefault();
   for(const t of e.changedTouches){ const T=touches[t.identifier]; if(!T) continue; const dx=t.clientX-T.x, dy=t.clientY-T.y; T.x=t.clientX; T.y=t.clientY; T.moved=Math.max(T.moved,Math.hypot(t.clientX-T.x0,t.clientY-T.y0));
@@ -511,7 +511,7 @@ cvs.addEventListener('touchmove',e=>{ e.preventDefault();
     else if(!focus){ yaw-=dx*.0055; pitch=Math.max(-1.25,Math.min(1.1,pitch-dy*.0045)); } } },{passive:false});
 function endTouch(e){ for(const t of e.changedTouches){ const T=touches[t.identifier]; if(!T) continue; delete touches[t.identifier];
   if(T.joy){ joy.style.display='none'; move.x=move.y=0; }
-  if(T.moved<14&&performance.now()-T.t0<650) tap(t.clientX,t.clientY); } }
+  if(T.moved<14&&e.timeStamp-T.t0<650) tap(t.clientX,t.clientY); } }
 cvs.addEventListener('touchend',endTouch); cvs.addEventListener('touchcancel',endTouch);
 let md=null;
 cvs.addEventListener('mousedown',e=>{ md={x:e.clientX,y:e.clientY,m:0}; sfx('tap'); });
@@ -524,6 +524,8 @@ function tap(x,y){
   if(modalOpen()||busy||$('#fin').style.display==='flex') return;
   const r=cvs.getBoundingClientRect(); ndc.set((x-r.left)/r.width*2-1,-(y-r.top)/r.height*2+1); ray.setFromCamera(ndc,camera);
   if(focus==='mush'){ const hits=ray.intersectObjects(MUSH.map(m=>m.hit),false); if(hits.length) tapMush(hits[0].object.userData.mush); return; }
+  if(WORLD==='dulces'){ const hs=ray.intersectObjects(DINTER,true);
+    for(const h of hs){ let o=h.object; while(o&&!o.userData.act) o=o.parent; if(!o||!o.visible) continue; if(h.distance>5.5){ toast('Acércate más 👣'); return; } doAct(o.userData.act); return; } return; }
   if(WORLD==='mar'){ const hs=ray.intersectObjects(MINTER,true);
     for(const h of hs){ let o=h.object; while(o&&!o.userData.act) o=o.parent; if(!o||!o.visible) continue; if(h.distance>5.5){ toast('Acércate más 👣'); return; } doAct(o.userData.act); return; } return; }
   if(WORLD==='bosque'){ const hs=ray.intersectObjects(FINTER,true);
@@ -1151,7 +1153,7 @@ function openFlute(atThorns){
     <div id="flp" style="min-height:30px;font-size:26px;letter-spacing:4px"></div><button class="btn sec" onclick="closeModal()">Guardar flauta</button>`,b=>{
     b.querySelectorAll('[data-n]').forEach(x=>x.onclick=()=>{ const n=FL[+x.dataset.n]; note(n.f,.7); x.animate([{transform:'scale(.85)'},{transform:'scale(1)'}],{duration:220});
       played.push(n.k); played=played.slice(-4); b.querySelector('#flp').innerHTML=played.map(k=>`<span style="color:${hex(flk(k).c)};text-shadow:0 0 8px ${hex(flk(k).c)}">●</span>`).join('');
-      if(atThorns&&!S.f.espinas&&played.join()===SONG.join()){ S.f.espinas=1; save(); setTimeout(()=>{ closeModal(); openThorns(true); },600); }
+      if(atThorns&&!S.f.espinas&&played.join()===SONG.join()){ S.f.espinas=1; save(); setTimeout(()=>{ closeModal(); openThorns(true); take('flauta'); toast('🎵 La flauta se quedó con las espinas. Ya no la necesitas.',3200); },600); }
       else if(atThorns&&played.length===4&&played.join()!==SONG.join()){ b.querySelector('#flp').style.opacity=.5; setTimeout(()=>{ const e=b.querySelector('#flp'); if(e) e.style.opacity=1; },300); } });
   });
 }
@@ -1329,6 +1331,8 @@ const clamTop=new THREE.Group(); clamTop.position.set(0,.18,-.55); clam.add(clam
   const top=new THREE.Mesh(new THREE.SphereGeometry(.8,24,12,0,6.28,0,Math.PI/2),cm); top.scale.y=.4; top.position.z=.55; clamTop.add(top);
   for(let k=-3;k<=3;k++){ const rib=new THREE.Mesh(new THREE.TorusGeometry(.8,.025,6,20,Math.PI),M(0xc8daf0,{r:.4})); rib.rotation.set(0,k*.25+Math.PI/2,0); rib.scale.y=.4; rib.position.z=.55; clamTop.add(rib); } }
 const pearlW=makePearl('blanca',.14); pearlW.position.set(-9,sH(-9,2)+.35,2); sea.add(pearlW);
+{ const hit=new THREE.Mesh(new THREE.SphereGeometry(1.05,12,8),new THREE.MeshBasicMaterial({visible:false})); hit.position.y=.4; clam.add(hit); }
+mact(pearlW,'almeja');
 mact(clam,'almeja',new THREE.Vector3(-9,sH(-9,2)+1.5,2));
 // cangrejo
 const crab=new THREE.Group(); sea.add(crab);
@@ -1432,7 +1436,7 @@ function updateSea(dt,T){
   pulpi.position.y=sH(2.4,8)+.9+Math.sin(T*1.4)*.12; { const dx=camera.position.x-pulpi.position.x, dz=camera.position.z-pulpi.position.z; pulpi.rotation.y=Math.atan2(dx,dz); }
   tentacles.forEach(t=>t.segs.forEach((s,k)=>{ s.rotation.z=-.35+Math.sin(T*2.2+t.ph+k*.7)*.25; }));
   // almeja: abierta 1.4 s, cerrada 2.2 s
-  const cyc=(T%3.8); const open=cyc<1.8; clam.userData.open=open;
+  const cyc=(T%3.8); const open=cyc<1.8; if(open) clam.userData.lastOpen=T; clam.userData.open=open||T-(clam.userData.lastOpen??-9)<.5;
   const target=open?-.75:0; clamTop.rotation.x+=(target-clamTop.rotation.x)*Math.min(1,dt*8);
   if(!S.f.p_blanca){ pearlW.visible=true; pearlW.material.emissiveIntensity=open?.8:.2; }
   // cangrejo
@@ -1491,7 +1495,7 @@ Object.assign(ACT,{
     say('🐙 Pulpi',`¡Jijiji! Hola, ${P.ella}… Sí, fui yo 🙈. Me robé las <b>5 perlas</b> del cofre del barco hundido y las escondí por todo el mar.<br><br>⚪ Una se la di a la <b>almeja gigante</b> (solo se abre a ratos).<br>🌸 Otra la tiene un <b>cangrejo</b> que no para de correr.<br>🟡 Otra está entre las <b>medusas</b>… ¡pican!<br>🔵 Otra la metí en un <b>barril</b> junto al barco.<br>⚫ Y la última quedó en el fondo de la <b>cabina</b>.<br><br>El orden para el cofre… pregúntaselo a la <b>caracola</b>. 🐚`); },
   caracola(){ S.f.caracola=1; save(); [880,660,990,740].forEach((f,i)=>setTimeout(()=>note(f,.9,.05),i*260));
     modal(`<h2>🐚 La caracola</h2><p style="color:#b9a8d6">Te acercas la caracola al oído… y se escucha un susurro:</p>
-      <div class="letter" style="font-size:24px;text-align:center">"Pon las perlas en el cofre así…<br><br>⚪ <b>blanca</b> como la espuma de la playa,<br>🌸 <b>rosada</b> como tus mejillas cuando te digo Amorsh,<br>🟡 <b>dorada</b> como el sol de nuestra primera salida,<br>🔵 <b>azul</b> como el mar de ese día,<br>⚫ y <b>negra</b> como la noche en que te extraño."</div><button class="btn" onclick="closeModal()">OK</button>`); },
+      <div class="letter" style="font-size:20px;line-height:1.2;padding:12px 14px">"Pon las perlas en el cofre así…"<ol style="margin:8px 0 0;padding-left:22px"><li>⚪ <b>Blanca</b>, como la espuma de la playa.</li><li>🌸 <b>Rosada</b>, como tus mejillas cuando te digo Amorsh.</li><li>🟡 <b>Dorada</b>, como el sol de nuestra primera salida.</li><li>🔵 <b>Azul</b>, como el mar de ese día.</li><li>⚫ <b>Negra</b>, como la noche en que te extraño.</li></ol></div><button class="btn" onclick="closeModal()">OK</button>`); },
   almeja(){ if(S.f.p_blanca) return toast('La almeja ya no tiene nada.'); if(clam.userData.open){ sfx('item'); takePearl('blanca',pearlW); } else { sfx('bad'); toast('¡Clac! 🦪 Se cerró. Espera a que se abra…'); } },
   cangrejo(){ if(S.f.p_rosada) return; crabCaught=true; sfx('item'); toast('¡Atrapaste al cangrejo! 🦀 Soltó la perla.'); const cp=crab.userData.pearl; takePearl('rosada',cp); setTimeout(()=>{ crabCaught=false; },2500); },
   perlaDorada(){ takePearl('dorada',pearlG); },
@@ -1500,18 +1504,394 @@ Object.assign(ACT,{
   cofreMar(){ if(S.f.cofreMar) return; openSeaChestUI(); },
   voz(){ if(!S.f.cofreMar||!voice.visible&&!S.f.voz) return; collectVoice(); },
   volverBosque(){ if(switching) return; switchWorld('bosque',()=>{ FP.x=0; FP.z=-23.4; yaw=Math.PI; pitch=-.05; camera.position.set(FP.x,walkH(FP.x,FP.z)+1.6,FP.z); }); },
-  portal4(){ if(switching||$('#fin').style.display==='flex') return; sfx('magic');
-    showFin(`<div style="font-size:64px">🍭</div><h2 style="margin:8px 0">¡Mundo 3 completo, ${P.apodo}!</h2>
-      <p style="color:#d9c8ff">🧩 Partes de J: <b>${S.parts.length}/7</b> · ⏱ <b>${fmt(S.t)}</b> · 💡 <b>${S.hints}</b></p>
-      <p style="color:#d9c8ff;max-width:320px">El portal rosado te lleva al <b>🍭 Mundo de Dulces</b>, donde está escondida mi sonrisa 😄.</p>
-      <p style="color:#9a88b8;font-size:14px">(Este mundo todavía se está construyendo ✨)</p><button class="btn sec" id="backM">Volver al mar</button>`);
-    $('#backM').onclick=()=>{ $('#fin').style.display='none'; MP.x=4; MP.z=-8; yaw=0; }; },
+  portal4(){ if(switching) return; goDulces(); },
 });
 function applySeaState(){ const f=S.f;
   if(f.p_blanca) pearlW.visible=false; if(f.p_rosada) crab.userData.pearl.visible=false; if(f.p_dorada) pearlG.visible=false; if(f.p_negra) pearlN.visible=false;
   if(f.cofreMar){ openSeaChest(false); if(!f.voz) showVoice(false); } if(f.voz){ voice.visible=false; candyPortal.visible=true; } }
 applySeaState();
-Object.assign(window.G,{goMar:()=>goMar(), get MP(){return MP}, mtp:(x,z,y)=>{MP.x=x;MP.z=z;if(y!==undefined)yaw=y;}, mstep:(n,mx,my)=>{ for(let i=0;i<n;i++) seaStep(1/60,mx,my,1,performance.now()/1000); }, clamOpen:()=>!!clam.userData.open, pearlBtn:k=>{ const e=document.querySelector(`[data-p="${k}"]`); e&&e.click(); }});
+Object.assign(window.G,{goMar:()=>goMar(), get MP(){return MP}, mtp:(x,z,y)=>{MP.x=x;MP.z=z;if(y!==undefined)yaw=y;}, mstep:(n,mx,my)=>{ for(let i=0;i<n;i++) seaStep(1/60,mx,my,1,performance.now()/1000); }, clamOpen:()=>!!clam.userData.open, hitAt:(x,y)=>{ const r=cvs.getBoundingClientRect(); ndc.set((x-r.left)/r.width*2-1,-(y-r.top)/r.height*2+1); ray.setFromCamera(ndc,camera); return ray.intersectObjects(MINTER,true).slice(0,4).map(hh=>{ let o=hh.object; while(o&&!o.userData.act) o=o.parent; return (o?o.userData.act:'?')+'@'+hh.distance.toFixed(2); }); }, pearlWScr:()=>{ const v=pearlW.getWorldPosition(new THREE.Vector3()).project(camera); const r=cvs.getBoundingClientRect(); return [r.left+(v.x+1)/2*r.width, r.top+(1-v.y)/2*r.height]; }, pearlBtn:k=>{ const e=document.querySelector(`[data-p="${k}"]`); e&&e.click(); }});
+
+// ================== MUNDO 4: MUNDO DE DULCES ==================
+var DP={x:0,y:0,z:14,vy:0,on:null,gr:true,coy:0,safe:[0,0,14]};
+const candy=new THREE.Scene(); candy.environment=scene.environment;
+candy.background=new THREE.Color(0xffd9ef); candy.fog=new THREE.Fog(0xffd9ef,26,80);
+const DINTER=[], DCIRC=[], DRECT=[], DPL=[];
+function dact(obj,name,spark){ obj.userData.act=name; DINTER.push(obj); if(spark) addSpark(name,spark,candy); return obj; }
+Object.assign(ITEMS,{
+  fresa:{e:'🍓',n:'Fresa gigante',d:'Roja, brillante y jugosa. La trajiste del otro lado del río de chocolate.'},
+  naranja:{e:'🍊',n:'Gomita de naranja',d:'La gomita buena de la bruja. ¡Esta no está envenenada!'},
+  limon:{e:'🍋',n:'Caramelo de limón',d:'Amarillo como el sol. Estaba en la punta del pastel gigante.'},
+  menta:{e:'🌿',n:'Hoja de menta',d:'Verde y fresquita. Estaba en una nube de algodón de azúcar.'},
+  pastel:{e:'🎂',n:'Pastel mágico',d:'Huele delicioso. A Don Jengibre le va a encantar.'}});
+const RECIPE=['fresa','naranja','limon','menta'];
+const JARS=[{k:'rosa',c:0xff7eb6},{k:'verde',c:0x5be38a},{k:'azul',c:0x5aa8ff},{k:'amarillo',c:0xffd23b},{k:'morado',c:0xb57bff}], GOOD_JAR=2;
+Object.assign(DONE,{gomi:()=>S.f.gomi, receta:()=>S.f.receta, fresa:()=>S.f.i_fresa, letreroBruja:()=>S.f.bruja||S.f.i_naranja, limon:()=>S.f.i_limon, menta:()=>S.f.i_menta,
+  olla:()=>S.f.pastel||!(S.f.i_fresa&&S.f.i_naranja&&S.f.i_limon&&S.f.i_menta), jengibre:()=>S.f.reja, reinaC:()=>S.f.sonrisa||!S.f.reja, sonrisa:()=>S.f.sonrisa||!S.f.reinaOk, portal5:()=>!S.f.sonrisa, volverMar:()=>true});
+JARS.forEach((j,i)=>DONE['frasco'+i]=()=>S.f.i_naranja);
+// ---------- terreno ----------
+const rcX=z=>-12+1.8*Math.sin(z*.2);
+function dG(x,z){ let h=.22*Math.sin(x*.18)*Math.cos(z*.15)+.12*Math.sin(x*.4+z*.3);
+  if(x>-7.6&&x<7.6&&z<-18.9&&z>-26.6) return 0; if(x>-7.6&&x<7.6&&z<-18.9&&z>-26.6) return 0; const d=Math.abs(x-rcX(z)); if(d<4.2){ const k=d<3.4?1:1-(d-3.4)/.8; h=h*(1-k)+(-1.5)*k; } return h; }
+const inRiver=(x,z)=>Math.abs(x-rcX(z))<3.5;
+const frostTex=ctex(256,256,g=>{ g.fillStyle='#ffc9e3'; g.fillRect(0,0,256,256);
+  for(let i=0;i<40;i++){ g.fillStyle=`rgba(255,255,255,${.12+Math.random()*.15})`; g.beginPath(); g.arc(Math.random()*256,Math.random()*256,10+Math.random()*30,0,7); g.fill(); }
+  const cs=['#ff5c8a','#5ad0ff','#ffd23b','#7be38a','#b57bff','#ffffff','#ff9a3c'];
+  for(let i=0;i<260;i++){ g.save(); g.translate(Math.random()*256,Math.random()*256); g.rotate(Math.random()*3.14); g.fillStyle=cs[i%7]; g.beginPath(); g.roundRect(-5,-1.6,10,3.2,1.6); g.fill(); g.restore(); } },[16,16]);
+{ const geo=new THREE.PlaneGeometry(90,90,150,150); geo.rotateX(-Math.PI/2); const p=geo.attributes.position; for(let i=0;i<p.count;i++) p.setY(i,dG(p.getX(i),p.getZ(i)-3)); geo.computeVertexNormals();
+  const fl=new THREE.Mesh(geo,M(0xffffff,{map:frostTex,r:.75,env:.4})); fl.position.z=-3; candy.add(fl); }
+// río de chocolate
+const chocU={t:{value:0}};
+{ const m=new THREE.Mesh(new THREE.PlaneGeometry(90,90),new THREE.ShaderMaterial({fog:true,
+   vertexShader:'#include <fog_pars_vertex>\nvarying vec3 vP; void main(){ vP=(modelMatrix*vec4(position,1.)).xyz; vec4 mvPosition=viewMatrix*vec4(vP,1.); gl_Position=projectionMatrix*mvPosition;\n#include <fog_vertex>\n}',
+   fragmentShader:'#include <fog_pars_fragment>\nuniform float t; varying vec3 vP; void main(){ vec2 p=vP.xz*.5; p.y+=t*.6; float s=sin(p.x*2.+sin(p.y*1.7)*1.5)*sin(p.y*1.3+sin(p.x*1.1+t*.5)); vec3 c=mix(vec3(.25,.12,.05),vec3(.45,.24,.1),s*.5+.5); c+=vec3(.5,.35,.25)*pow(max(0.,s),8.)*.7; gl_FragColor=vec4(c,1.);\n#include <fog_fragment>\n}',
+   uniforms:THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{t:chocU.t}])}));
+  m.material.uniforms.t=chocU.t; m.rotation.x=-Math.PI/2; m.position.set(0,-.35,-3); candy.add(m); }
+// cielo
+{ const sky=new THREE.Mesh(new THREE.SphereGeometry(300,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,fog:false,depthWrite:false,
+   vertexShader:'varying vec3 vP; void main(){ vP=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+   fragmentShader:'varying vec3 vP; void main(){ float h=normalize(vP).y; vec3 c=mix(vec3(1.,.85,.94),vec3(.62,.8,1.),smoothstep(0.,.6,h)); gl_FragColor=vec4(c,1.); }'})); candy.add(sky); }
+candy.add(new THREE.HemisphereLight(0xfff0fa,0xffb3d6,1.25));
+{ const d=new THREE.DirectionalLight(0xfff2dc,1.6); d.position.set(15,30,12); candy.add(d); }
+// ---------- utilidades ----------
+const swirlTex=(a,b)=>ctex(256,256,g=>{ g.fillStyle=a; g.fillRect(0,0,256,256); g.strokeStyle=b; g.lineWidth=16; g.translate(128,128); g.beginPath(); for(let t=0;t<30;t+=.05){ const r=t*4.2; g.lineTo(Math.cos(t)*r,Math.sin(t)*r); } g.stroke(); });
+const stripeTex=ctex(64,64,g=>{ g.fillStyle='#fff'; g.fillRect(0,0,64,64); g.fillStyle='#ff3b5c'; for(let i=-2;i<4;i++){ g.beginPath(); g.moveTo(i*24,0); g.lineTo(i*24+14,0); g.lineTo(i*24+14+64,64); g.lineTo(i*24+64,64); g.fill(); } },[10,1]);
+const LOLLI=[['#ff7eb6','#ffffff'],['#5ad0ff','#ffffff'],['#ffd23b','#ff7a3c'],['#b57bff','#ffe0f5'],['#7be38a','#ffffff']].map(([a,b])=>swirlTex(a,b));
+function lollipop(x,z,s=1,ti=0,parent=candy){ const g=new THREE.Group(); g.position.set(x,dG(x,z),z); parent.add(g); CY(.06*s,.07*s,2.4*s,M(0xfffaf0,{r:.4}),0,1.2*s,0,g,10);
+  const disc=new THREE.Group(); disc.position.y=2.6*s; g.add(disc); const tm=M(0xffffff,{map:LOLLI[ti%5],r:.25,env:.8,side:THREE.DoubleSide});
+  const c=new THREE.Mesh(new THREE.CylinderGeometry(.85*s,.85*s,.2*s,40),[M(0xffffff,{r:.3,e:0x333333,ei:.1}),tm,tm]); c.rotation.x=Math.PI/2; disc.add(c);
+  g.userData.disc=disc; DCIRC.push({x,z,r:.18*s}); return g; }
+function cane(x,z,s=1,ry=0){ const pts=[]; for(let i=0;i<=10;i++) pts.push(new THREE.Vector3(0,i*.25*s,0)); for(let i=1;i<=8;i++){ const a=i/8*Math.PI; pts.push(new THREE.Vector3((1-Math.cos(a))*.45*s,2.5*s+Math.sin(a)*.45*s,0)); }
+  const m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),60,.11*s,10),M(0xffffff,{map:stripeTex,r:.3,env:.8})); m.position.set(x,dG(x,z),z); m.rotation.y=ry; candy.add(m); DCIRC.push({x,z,r:.2*s}); return m; }
+const GUMC=[0xff4f7a,0x4fd0ff,0xffd23b,0x6be36b,0xb57bff,0xff9a3c];
+const gumM=GUMC.map(c=>M(c,{r:.28,env:.9,e:c,ei:.18}));
+function gumdrop(x,z,s,ci,parent=candy,y){ const m=new THREE.Mesh(new THREE.SphereGeometry(1,24,14,0,6.29,0,Math.PI/2),gumM[ci%6]); m.scale.set(s,s*1.15,s); m.position.set(x,y??dG(x,z),z); parent.add(m); return m; }
+function donut(x,z,s,ry){ const g=new THREE.Group(); g.position.set(x,dG(x,z)+.9*s,z); g.rotation.set(Math.PI/2.4,ry,0); candy.add(g);
+  g.add(new THREE.Mesh(new THREE.TorusGeometry(.7*s,.38*s,14,28),M(0xd99a55,{r:.7}))); const ic=new THREE.Mesh(new THREE.TorusGeometry(.7*s,.3*s,12,28),M(0xff8fc8,{r:.35})); ic.position.z=.14*s; g.add(ic); DCIRC.push({x,z,r:1.1*s}); }
+function iceCream(x,z,s){ const g=new THREE.Group(); g.position.set(x,dG(x,z),z); candy.add(g); const cn=new THREE.Mesh(new THREE.ConeGeometry(.5*s,1.6*s,16),M(0xd8a25a,{r:.8})); cn.rotation.x=Math.PI; cn.position.y=.8*s; g.add(cn);
+  [[0xfff2c8,0],[0xff9ac8,.45],[0x9a5a3a,.85]].forEach(([c,y])=>{ const b=new THREE.Mesh(new THREE.SphereGeometry(.55*s*(1-y*.25),18,14),M(c,{r:.6})); b.position.y=(1.75+y)*s; g.add(b); }); DCIRC.push({x,z,r:.45*s}); }
+function cottonCloud(x,y,z,s,col=0xffd0ea){ const g=new THREE.Group(); g.position.set(x,y,z); candy.add(g); const m=M(col,{r:1,e:col,ei:.25});
+  for(let i=0;i<7;i++){ const b=new THREE.Mesh(new THREE.SphereGeometry(s*(.5+Math.random()*.4),16,12),m); b.position.set((Math.random()-.5)*s*2.2,(Math.random()-.3)*s*.5,(Math.random()-.5)*s*1.4); g.add(b); } return g; }
+// plataformas: {x,z,r,top,bot}
+function dplat(o){ DPL.push(Object.assign({dx:0,dy:0,dz:0,bot:-9},o)); return DPL[DPL.length-1]; }
+const KEEP=[[0,14,4],[0,9,3.5],[0,5,3],[0,0,7],[10,7,4.5],[12,-10,5.5],[-4,-12,5],[0,-23,9],[2.2,11,2],[-2.4,11,2],[-20,-3,3.5]];
+const free=(x,z)=>!inRiver(x,z)&&Math.abs(x-rcX(z))>4.6&&KEEP.every(([a,b,r])=>Math.hypot(x-a,z-b)>r)&&Math.hypot(x,z+3)<23.5;
+const rr=(()=>{ let s=7; return ()=>{ s=(s*16807)%2147483647; return s/2147483647; }; })();
+// decoración
+const lollis=[];
+for(let i=0;i<26;i++){ let x,z,n=0; do{ x=(rr()-.5)*48; z=-3+(rr()-.5)*48; n++; }while(!free(x,z)&&n<60); if(n<60) lollis.push(lollipop(x,z,.8+rr()*.7,i)); }
+for(let i=0;i<10;i++){ let x,z,n=0; do{ x=(rr()-.5)*46; z=-3+(rr()-.5)*46; n++; }while(!free(x,z)&&n<60); if(n<60) cane(x,z,.8+rr()*.5,rr()*6); }
+for(let i=0;i<40;i++){ let x,z,n=0; do{ x=(rr()-.5)*48; z=-3+(rr()-.5)*48; n++; }while(!free(x,z)&&n<60); if(n<60){ const s=.25+rr()*.35; gumdrop(x,z,s,i); if(s>.45) DCIRC.push({x,z,r:s}); } }
+for(let i=0;i<5;i++){ let x,z,n=0; do{ x=(rr()-.5)*44; z=-3+(rr()-.5)*44; n++; }while(!free(x,z)&&n<60); if(n<60) donut(x,z,.8+rr()*.4,rr()*6); }
+for(let i=0;i<6;i++){ let x,z,n=0; do{ x=(rr()-.5)*44; z=-3+(rr()-.5)*44; n++; }while(!free(x,z)&&n<60); if(n<60) iceCream(x,z,.9+rr()*.6); }
+const skyClouds=[]; for(let i=0;i<14;i++){ const a=i/14*6.28; skyClouds.push({g:cottonCloud(Math.cos(a)*(34+rr()*20),9+rr()*10,-3+Math.sin(a)*(34+rr()*20),2+rr()*2,[0xffd0ea,0xd8ecff,0xffffff][i%3]),a,ph:rr()*6}); }
+// orilla oeste: más dulces
+lollipop(-21,-9,1.2,1); lollipop(-19,5,1,3); cane(-22,1,1.1,1); gumdrop(-18,-8,.5,4);
+// ---------- Gomi, el osito de gomita ----------
+const gomi=new THREE.Group(); gomi.position.set(2.2,dG(2.2,11),11); candy.add(gomi);
+{ const gm=M(0xff3b5c,{r:.2,env:1.2,tr:true,op:.88,e:0x8a0820,ei:.35});
+  const sp=(r,x,y,z,sx=1,sy=1,sz=1)=>{ const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,14),gm); m.position.set(x,y,z); m.scale.set(sx,sy,sz); gomi.add(m); return m; };
+  sp(.42,0,.65,0,1,1.15,.9); sp(.33,0,1.3,0); sp(.12,-.25,1.58,0); sp(.12,.25,1.58,0); sp(.14,-.4,.8,.1,1,1.4,1); sp(.14,.4,.8,.1,1,1.4,1); sp(.16,-.2,.2,.05,1,1.2,1); sp(.16,.2,.2,.05,1,1.2,1);
+  const sn=sp(.13,0,1.24,.28,1.2,.9,1); sn.material=M(0xff7a8c,{r:.3,tr:true,op:.95});
+  for(const s of [-1,1]){ const e=new THREE.Mesh(new THREE.SphereGeometry(.05,10,8),M(0x111111,{r:.2})); e.position.set(s*.13,1.38,.28); gomi.add(e); }
+  const nose=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),M(0x3a0010)); nose.position.set(0,1.28,.4); gomi.add(nose); }
+dact(gomi,'gomi',new THREE.Vector3(2.2,dG(2.2,11)+2.1,11)); DCIRC.push({x:2.2,z:11,r:.6});
+// libro de recetas en un atril de galleta
+const book=new THREE.Group(); book.position.set(-2.4,dG(-2.4,11),11); book.rotation.y=.4; candy.add(book);
+{ CY(.12,.18,1,M(0xc98a4a,{r:.8}),0,.5,0,book,10); const top=B(.8,.08,.6,M(0xc98a4a,{r:.8}),0,1.05,0,book); top.rotation.x=-.4;
+  const pg=ctex(256,180,g=>{ g.fillStyle='#fff6e6'; g.fillRect(0,0,256,180); g.fillStyle='#c24a7a'; g.font='700 30px Caveat'; g.textAlign='center'; g.fillText('Pastel Mágico',128,40); g.font='26px Caveat'; g.fillStyle='#6a3a2a'; ['🍓 🍊 🍋 🌿','en orden del','arcoíris 🌈'].forEach((t,i)=>g.fillText(t,128,82+i*32)); });
+  const p=new THREE.Mesh(new THREE.PlaneGeometry(.74,.52),new THREE.MeshBasicMaterial({map:pg})); p.position.set(0,1.1,.01); p.rotation.x=-Math.PI/2+1.17; book.add(p); }
+dact(book,'receta',new THREE.Vector3(-2.4,dG(-2.4,11)+1.8,11)); DCIRC.push({x:-2.4,z:11,r:.45});
+// ---------- arcoíris y olla mágica ----------
+{ const cols=[0xff3b4f,0xff8a2b,0xffd23b,0x5be38a,0x3b8bff,0x6b5bff,0xb57bff];
+  cols.forEach((c,i)=>{ const t=new THREE.Mesh(new THREE.TorusGeometry(6.2-i*.32,.17,10,64,Math.PI),M(c,{r:.35,e:c,ei:.35})); t.position.set(0,dG(0,0)-.1,0); candy.add(t); });
+  DCIRC.push({x:-5.2,z:0,r:1.3},{x:5.2,z:0,r:1.3});
+  cottonCloud(-5.4,.2,0,.9,0xffffff); cottonCloud(5.4,.2,0,.9,0xffffff); }
+const pot=new THREE.Group(); pot.position.set(0,dG(0,0),0); candy.add(pot);
+const potLiquid=new THREE.Mesh(new THREE.CircleGeometry(.82,32),M(0xff7eb6,{r:.2,e:0xff4fa0,ei:.5}));
+{ const pts=[]; for(let i=0;i<=12;i++){ const t=i/12; pts.push(new THREE.Vector2(.55+Math.sin(t*Math.PI)*.45,t*1.1)); }
+  const body=new THREE.Mesh(new THREE.LatheGeometry(pts,32),M(0x6a4bd8,{r:.35,m:.3,env:1,side:THREE.DoubleSide})); pot.add(body);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(.56,.07,10,32),M(0xffd23b,{m:.8,r:.3,env:1.2})); rim.rotation.x=Math.PI/2; rim.position.y=1.1; pot.add(rim);
+  potLiquid.rotation.x=-Math.PI/2; potLiquid.position.y=.95; potLiquid.scale.setScalar(.7); pot.add(potLiquid);
+  for(let i=0;i<3;i++){ const l=CY(.06,.06,.4,M(0x4a3a8a),Math.cos(i*2.1)*.6,.05,Math.sin(i*2.1)*.6,pot,6); l.rotation.z=Math.cos(i*2.1)*.3; } }
+dact(pot,'olla',new THREE.Vector3(0,dG(0,0)+1.9,0)); DCIRC.push({x:0,z:0,r:1.05});
+const cakeItem=new THREE.Group(); cakeItem.visible=false; candy.add(cakeItem);
+{ CY(.35,.35,.25,M(0xfff0f5,{r:.6}),0,.12,0,cakeItem,24); CY(.36,.36,.06,M(0xff7eb6,{r:.4}),0,.27,0,cakeItem,24); CY(.24,.24,.2,M(0xfff0f5,{r:.6}),0,.38,0,cakeItem,24); CY(.25,.25,.05,M(0xff7eb6,{r:.4}),0,.5,0,cakeItem,24);
+  const st=new THREE.Mesh(new THREE.SphereGeometry(.07,12,10),M(0xff2a4a,{r:.3,e:0x550010,ei:.4})); st.position.y=.58; cakeItem.add(st); }
+// ---------- ingrediente 1: la fresa, al otro lado del río ----------
+const COOK=[dplat({x:-10.2,z:-2.2,r:.75,top:.02,cookie:1}), dplat({x:-12.5,z:-1.5,r:.7,top:.02,cookie:1,slide:1.3,ph:0}), dplat({x:-14.8,z:-2.4,r:.7,top:.02,cookie:1,sink:1,ph:1.5})];
+const cookTex=ctex(128,128,g=>{ g.fillStyle='#d9a25a'; g.fillRect(0,0,128,128); for(let i=0;i<14;i++){ g.fillStyle='#4a2410'; g.beginPath(); g.arc(Math.random()*128,Math.random()*128,5+Math.random()*4,0,7); g.fill(); } });
+COOK.forEach(c=>{ c.mesh=new THREE.Mesh(new THREE.CylinderGeometry(c.r,c.r*.95,.25,28),[M(0xc58a48,{r:.8}),M(0xffffff,{map:cookTex,r:.8}),M(0xc58a48,{r:.8})]); c.mesh.position.set(c.x,c.top-.12,c.z); candy.add(c.mesh); c.bx=c.x; c.bz=c.z; });
+const cupcake=new THREE.Group(); cupcake.position.set(-20,dG(-20,-3),-3); candy.add(cupcake);
+{ const wr=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1,.9,24,1,true),M(0x5ad0ff,{r:.6,side:THREE.DoubleSide})); wr.position.y=.45; cupcake.add(wr);
+  const fr=new THREE.Mesh(new THREE.SphereGeometry(1.3,28,14,0,6.29,0,Math.PI/2),M(0xfff0f8,{r:.5})); fr.scale.y=.35; fr.position.y=.9; cupcake.add(fr); }
+dplat({x:-20,z:-3,r:1.25,top:dG(-20,-3)+1.3,bot:dG(-20,-3)});
+const fresa=new THREE.Group(); fresa.position.set(-20,dG(-20,-3)+1.75,-3); candy.add(fresa);
+{ const b=new THREE.Mesh(new THREE.SphereGeometry(.3,20,16),M(0xff2a4a,{r:.25,env:1,e:0x550010,ei:.3})); b.scale.y=1.2; b.geometry.translate(0,-.05,0); fresa.add(b);
+  const lv=new THREE.Mesh(new THREE.ConeGeometry(.22,.12,6),M(0x3fbf4a)); lv.position.y=.36; lv.rotation.x=Math.PI; fresa.add(lv);
+  for(let i=0;i<14;i++){ const sd=new THREE.Mesh(new THREE.SphereGeometry(.02,6,4),M(0xffe27a)); const a=i*2.4, y=(i/14-.5)*.5; sd.position.set(Math.cos(a)*.29*Math.cos(y),y,Math.sin(a)*.29*Math.cos(y)); fresa.add(sd); } }
+dact(fresa,'fresa',new THREE.Vector3(-20,dG(-20,-3)+2.4,-3));
+{ const sg=ctex(256,128,g=>{ g.fillStyle='#7a4a2a'; g.fillRect(0,0,256,128); g.fillStyle='#fff3d6'; g.font='700 34px Caveat'; g.textAlign='center'; g.fillText('¡Cuidado! 🍫',128,50); g.font='28px Caveat'; g.fillText('Río de chocolate',128,92); });
+  const s=new THREE.Group(); s.position.set(-8,dG(-8,0),.2); s.rotation.y=-.9; candy.add(s); CY(.06,.06,1.4,M(0x7a4a2a),0,.7,0,s,6); const pl=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.6),new THREE.MeshBasicMaterial({map:sg,side:THREE.DoubleSide})); pl.position.y=1.5; s.add(pl); }
+// ---------- ingrediente 2: los frascos de la bruja ----------
+const JT=new THREE.Vector3(10,0,7); JT.y=dG(10,7);
+{ const tm=M(0x8a5a3a,{r:.7}); B(4.2,.12,1.1,M(0xffe0f0,{r:.6}),JT.x,JT.y+.9,JT.z); [[-1.9,-.4],[1.9,-.4],[-1.9,.4],[1.9,.4]].forEach(([a,b])=>CY(.07,.07,.9,tm,JT.x+a,JT.y+.45,JT.z+b,candy,8));
+  DRECT.push({x1:JT.x-2.15,z1:JT.z-.6,x2:JT.x+2.15,z2:JT.z+.6,on:true}); }
+const jarObjs=JARS.map((j,i)=>{ const g=new THREE.Group(); g.position.set(JT.x-1.6+i*.8,JT.y+.96,JT.z); candy.add(g);
+  const glass=CY(.22,.22,.5,M(0xffffff,{r:.05,tr:true,op:.3,env:1.5,dw:false}),0,.25,0,g,20);
+  const gum=new THREE.Mesh(new THREE.SphereGeometry(.12,14,10),M(i===GOOD_JAR?0xff9a3c:[0x7a9a3a,0x6a8a2a,0,0x8aa83a,0x5a7a3a][i],{r:.3,e:i===GOOD_JAR?0x7a3a00:0x1a3a00,ei:.4})); gum.position.y=.16; gum.scale.y=.8; g.add(gum); g.userData.gum=gum;
+  const lid=CY(.25,.25,.1,M(j.c,{r:.35,env:.8}),0,.55,0,g,20); g.userData.lid=lid;
+  const n=ctex(64,64,c=>{ c.fillStyle='#fff'; c.beginPath(); c.arc(32,32,30,0,7); c.fill(); c.fillStyle='#5a2a4a'; c.font='700 40px Fredoka'; c.textAlign='center'; c.fillText(String(i+1),32,46); });
+  const lb=new THREE.Mesh(new THREE.CircleGeometry(.11,20),new THREE.MeshBasicMaterial({map:n})); lb.position.set(0,.28,.225); g.add(lb);
+  dact(g,'frasco'+i,new THREE.Vector3(g.position.x,g.position.y+.9,JT.z)); return g; });
+const witchSign=new THREE.Group(); witchSign.position.set(JT.x,JT.y,JT.z-1.3); candy.add(witchSign);
+{ const tx=ctex(512,400,g=>{ g.fillStyle='#2a1a3a'; g.fillRect(0,0,512,400); g.strokeStyle='#b57bff'; g.lineWidth=10; g.strokeRect(8,8,496,384);
+    g.fillStyle='#ffd23b'; g.font='700 44px Caveat'; g.textAlign='center'; g.fillText('Los frascos de la Bruja',256,62); g.fillStyle='#f3e6ff'; g.font='31px Caveat'; g.textAlign='left';
+    ['Solo UNO tiene la gomita buena.','Los demás… ¡envenenados! ☠','1. No está en ninguna punta.','2. Está al lado de un frasco','    de tapa rosada o amarilla.','3. Su tapa no es del color','    de las hojas.'].forEach((t,i)=>g.fillText(t,34,112+i*40)); });
+  CY(.08,.08,3.6,M(0x2a1a3a),-1.25,1.8,0,witchSign,8); CY(.08,.08,3.6,M(0x2a1a3a),1.25,1.8,0,witchSign,8);
+  const pl=new THREE.Mesh(new THREE.PlaneGeometry(2.6,2.03),new THREE.MeshBasicMaterial({map:tx})); pl.position.set(0,2.85,.05); witchSign.add(pl);
+  const hat=new THREE.Mesh(new THREE.ConeGeometry(.45,1,16),M(0x3a1a5a,{r:.6})); hat.position.set(0,4.4,0); hat.rotation.z=.25; witchSign.add(hat);
+  const brim=CY(.75,.75,.05,M(0x3a1a5a,{r:.6}),0,3.9,0,witchSign,24); brim.rotation.z=.25; }
+dact(witchSign,'letreroBruja',new THREE.Vector3(JT.x+1.5,JT.y+4.1,JT.z-1.3)); DRECT.push({x1:JT.x-1.35,z1:JT.z-1.45,x2:JT.x+1.35,z2:JT.z-1.15,on:true});
+// ---------- ingrediente 3: el limón, en la punta del pastel gigante ----------
+const CK=new THREE.Vector3(12,0,-10); CK.y=dG(12,-10);
+const TIERS=[[3.2,2.4,0xfff0f5,0xff7eb6],[2.3,4.0,0xffe0b0,0x5ad0ff],[1.4,5.6,0xffd0e8,0xb57bff]];
+{ let bot=CK.y-.3; TIERS.forEach(([r,top,c,ic])=>{ const h=CK.y+top-bot; CY(r,r,h,M(c,{r:.6}),CK.x,bot+h/2,CK.z,candy,40);
+    const ic2=new THREE.Mesh(new THREE.TorusGeometry(r,.12,8,48),M(ic,{r:.4,e:ic,ei:.2})); ic2.rotation.x=Math.PI/2; ic2.position.set(CK.x,CK.y+top,CK.z); candy.add(ic2);
+    for(let i=0;i<10;i++){ const a=i/10*6.28; const d=new THREE.Mesh(new THREE.SphereGeometry(.13,10,8),M(ic,{r:.4})); d.scale.y=1.6; d.position.set(CK.x+Math.cos(a)*r,CK.y+top-.2,CK.z+Math.sin(a)*r); candy.add(d); }
+    dplat({x:CK.x,z:CK.z,r,top:CK.y+top,bot:bot}); bot=CK.y+top; }); }
+const stepDrop=dplat({x:7.6,z:-8.4,r:.8,top:dG(7.6,-8.4)+1.2,bot:dG(7.6,-8.4)}); { const g=gumdrop(7.6,-8.4,.8,1); g.scale.y=1.2; }
+const lemon=new THREE.Group(); lemon.position.set(CK.x,CK.y+6.05,CK.z); candy.add(lemon);
+{ const l=new THREE.Mesh(new THREE.SphereGeometry(.28,20,14),M(0xffe23b,{r:.3,env:1,e:0x8a6a00,ei:.35})); l.scale.set(1.35,1,1); lemon.add(l);
+  for(const s of [-1,1]){ const w=new THREE.Mesh(new THREE.ConeGeometry(.1,.14,8),M(0xffffff,{r:.3,tr:true,op:.8})); w.rotation.z=-s*Math.PI/2; w.position.x=s*.43; lemon.add(w); } }
+dact(lemon,'limon',new THREE.Vector3(CK.x,CK.y+6.7,CK.z));
+// ---------- ingrediente 4: la menta, en una nube ----------
+const tramp=dplat({x:-4,z:-10,r:.9,top:dG(-4,-10)+.3,bot:dG(-4,-10),tramp:1});
+const trampM=new THREE.Group(); trampM.position.set(-4,dG(-4,-10),-10); candy.add(trampM);
+{ const t=new THREE.Mesh(new THREE.CylinderGeometry(.9,1,.3,32),M(0x6be36b,{r:.25,env:1,tr:true,op:.9,e:0x1a6a1a,ei:.3})); t.position.y=.15; trampM.add(t);
+  const sg=ctex(128,64,g=>{ g.fillStyle='#fff'; g.font='700 40px Fredoka'; g.textAlign='center'; g.fillText('¡BOING!',64,46); }); const pl=new THREE.Mesh(new THREE.PlaneGeometry(.9,.45),new THREE.MeshBasicMaterial({map:sg,transparent:true})); pl.rotation.x=-Math.PI/2; pl.position.y=.31; trampM.add(pl); }
+addSpark('tramp',new THREE.Vector3(-4,dG(-4,-10)+1,-10),candy); DONE.tramp=()=>S.f.i_menta;
+const CLOUD=dplat({x:-4,z:-13.8,r:2,top:7.2,bot:6.5,cloud:1});
+const cloudM=cottonCloud(-4,6.8,-13.8,1.5,0xffc0e3); cloudM.scale.set(1,.55,1);
+{ const top=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.6,.3,32),M(0xffd0ea,{r:1,e:0xffd0ea,ei:.25})); top.position.y=.45/.55; top.scale.y=1/.55; cloudM.add(top); }
+const mint=new THREE.Group(); mint.position.set(-4,7.65,-13.8); candy.add(mint);
+{ const lm=M(0x3ad46a,{r:.35,e:0x0a5a2a,ei:.4,side:THREE.DoubleSide}); for(let i=0;i<3;i++){ const lf=new THREE.Mesh(new THREE.SphereGeometry(.22,14,10),lm); lf.scale.set(.55,.12,1); lf.position.set(Math.cos(i*2.1)*.15,0,Math.sin(i*2.1)*.15); lf.rotation.y=-i*2.1; mint.add(lf); } }
+dact(mint,'menta',new THREE.Vector3(-4,8.4,-13.8));
+// ---------- el castillo ----------
+const CW={x1:-7,x2:7,z1:-26,z2:-19.5}, GATE=1.3, WH=4.2;
+const castle=new THREE.Group(); candy.add(castle);
+const wallTex=ctex(256,256,g=>{ g.fillStyle='#ffb3d6'; g.fillRect(0,0,256,256); g.strokeStyle='#ff8fc2'; g.lineWidth=4; for(let y=0;y<256;y+=32){ g.beginPath(); g.moveTo(0,y); g.lineTo(256,y); g.stroke(); for(let x=(y/32%2)*32;x<256;x+=64){ g.beginPath(); g.moveTo(x,y); g.lineTo(x,y+32); g.stroke(); } } },[3,1]);
+{ const wm=M(0xffffff,{map:wallTex,r:.7}), drip=M(0xfff6fb,{r:.4});
+  const seg=(x1,z1,x2,z2)=>{ const w=Math.hypot(x2-x1,z2-z1), cx=(x1+x2)/2, cz=(z1+z2)/2; const m=B(w,WH,.6,wm,cx,WH/2-.3,cz,castle); m.rotation.y=-Math.atan2(z2-z1,x2-x1);
+    const n=Math.max(2,Math.round(w/1.1)); for(let i=0;i<n;i++){ const t=(i+.5)/n; const d=new THREE.Mesh(new THREE.SphereGeometry(.34,10,8),drip); d.scale.y=1.6; d.position.set(x1+(x2-x1)*t,WH-.3,z1+(z2-z1)*t); castle.add(d); }
+    DRECT.push({x1:Math.min(x1,x2)-.3,z1:Math.min(z1,z2)-.3,x2:Math.max(x1,x2)+.3,z2:Math.max(z1,z2)+.3,on:true}); };
+  seg(CW.x1,CW.z2,-GATE,CW.z2); seg(GATE,CW.z2,CW.x2,CW.z2); seg(CW.x1,CW.z1,CW.x2,CW.z1); seg(CW.x1,CW.z1,CW.x1,CW.z2); seg(CW.x2,CW.z1,CW.x2,CW.z2);
+  B(2*GATE+.6,1,.7,wm,0,WH-.2,CW.z2,castle);
+  const cones=[0xffe0b0,0xb57bff,0x5ad0ff,0xff7eb6];
+  [[CW.x1,CW.z2],[CW.x2,CW.z2],[CW.x1,CW.z1],[CW.x2,CW.z1]].forEach(([x,z],i)=>{ CY(1.3,1.4,6.5,wm,x,3.25-.3,z,castle,24);
+    for(let k=0;k<3;k++){ const s=new THREE.Mesh(new THREE.TorusGeometry(1.1-k*.33,.33,10,24),M(cones[i],{r:.5})); s.rotation.x=Math.PI/2; s.position.set(x,6.4+k*.45,z); castle.add(s); }
+    const tip=new THREE.Mesh(new THREE.ConeGeometry(.3,.6,12),M(cones[i],{r:.5})); tip.position.set(x,7.7,z); castle.add(tip);
+    const ch=new THREE.Mesh(new THREE.SphereGeometry(.18,12,10),M(0xff2a4a,{r:.3,e:0x550010,ei:.3})); ch.position.set(x,8.05,z); castle.add(ch);
+    DCIRC.push({x,z,r:1.45}); });
+  const fl=ctex(64,64,g=>{ g.fillStyle='#ff4f9a'; g.fillRect(0,0,64,64); g.fillStyle='#fff'; g.font='40px serif'; g.textAlign='center'; g.fillText('♥',32,46); });
+  [[-3.5],[3.5]].forEach(([x])=>{ CY(.04,.04,1.6,M(0xffffff),x,WH+.5,CW.z2,castle,6); const f=new THREE.Mesh(new THREE.PlaneGeometry(.8,.5),new THREE.MeshStandardMaterial({map:fl,side:THREE.DoubleSide})); f.position.set(x+.42,WH+1,CW.z2); castle.add(f); });
+  const nameT=ctex(512,96,g=>{ g.fillStyle='#fff6fb'; g.font='700 64px Caveat'; g.textAlign='center'; g.fillText('Castillo Caramelo',256,70); });
+  const nm=new THREE.Mesh(new THREE.PlaneGeometry(3.2,.6),new THREE.MeshBasicMaterial({map:nameT,transparent:true})); nm.position.set(0,WH-.2,CW.z2+.37); castle.add(nm);
+  const inside=new THREE.Mesh(new THREE.PlaneGeometry(14,6.5),M(0xffe6f2,{r:.9})); inside.rotation.x=-Math.PI/2; inside.position.set(0,dG(0,-23)+.02,-22.75); candy.add(inside); }
+const gate=new THREE.Group(); gate.position.set(0,0,CW.z2); candy.add(gate);
+for(let i=0;i<6;i++){ const c=CY(.07,.07,3.2,M(0xffffff,{map:stripeTex,r:.3,env:.8}),-1.05+i*.42,1.4,0,gate,10); }
+B(2.7,.12,.12,M(0xff3b5c,{r:.4}),0,2.9,0,gate); B(2.7,.12,.12,M(0xff3b5c,{r:.4}),0,.5,0,gate);
+const gateR={x1:-GATE,z1:CW.z2-.2,x2:GATE,z2:CW.z2+.2,on:true}; DRECT.push(gateR);
+// Don Jengibre, el guardia
+const ginger=new THREE.Group(); ginger.position.set(2.3,dG(2.3,-18.4),-18.4); ginger.rotation.y=-.3; candy.add(ginger);
+{ const gm=M(0xb8692e,{r:.75}), ic=M(0xffffff,{r:.4});
+  const cap=(r,l,x,y,z,rz)=>{ const m=new THREE.Mesh(new THREE.CapsuleGeometry(r,l,6,12),gm); m.position.set(x,y,z); m.rotation.z=rz; m.scale.z=.55; ginger.add(m); return m; };
+  cap(.42,.5,0,1.15,0,0); const hd=new THREE.Mesh(new THREE.SphereGeometry(.36,20,14),gm); hd.position.y=1.95; hd.scale.z=.6; ginger.add(hd);
+  cap(.15,.45,-.55,1.35,0,1.1); cap(.15,.45,.55,1.35,0,-1.1); cap(.17,.5,-.22,.42,0,.15); cap(.17,.5,.22,.42,0,-.15);
+  for(const s of [-1,1]){ const e=new THREE.Mesh(new THREE.SphereGeometry(.05,10,8),ic); e.position.set(s*.13,2.02,.22); ginger.add(e); }
+  const sm=new THREE.Mesh(new THREE.TorusGeometry(.12,.02,6,16,Math.PI),ic); sm.position.set(0,1.88,.22); sm.rotation.z=Math.PI; ginger.add(sm);
+  [1.4,1.18,.96].forEach(y=>{ const b=new THREE.Mesh(new THREE.SphereGeometry(.06,10,8),M(0xff3b5c,{r:.3})); b.position.set(0,y,.25); ginger.add(b); });
+  const hat=CY(.22,.26,.4,M(0x2a2a3a,{r:.5}),0,2.42,0,ginger,16); CY(.36,.36,.04,M(0x2a2a3a,{r:.5}),0,2.24,0,ginger,20);
+  const sp=CY(.03,.03,2.6,M(0xffffff,{map:stripeTex}),.78,1.3,.05,ginger,8); const sb=new THREE.Mesh(new THREE.SphereGeometry(.12,10,8),M(0xffd23b,{m:.6,r:.3})); sb.position.set(.78,2.65,.05); ginger.add(sb); }
+dact(ginger,'jengibre',new THREE.Vector3(2.3,dG(2.3,-18.4)+2.9,-18.4)); DCIRC.push({x:2.3,z:-18.4,r:.6});
+// la Reina Caramelo y su trono
+const throneZ=-24.6;
+{ const ch=M(0x6a3a1e,{r:.5}); B(2,1.2,1.2,ch,0,.6,throneZ-.2); B(2,2.6,.3,ch,0,1.3,throneZ-.75); B(.3,1.6,1.2,ch,-1,.8,throneZ-.2); B(.3,1.6,1.2,ch,1,.8,throneZ-.2);
+  const hrt=new THREE.Shape(); hrt.moveTo(0,-.6); hrt.bezierCurveTo(-.9,0,-.5,.7,0,.35); hrt.bezierCurveTo(.5,.7,.9,0,0,-.6);
+  const hm=new THREE.Mesh(new THREE.ExtrudeGeometry(hrt,{depth:.15,bevelEnabled:true,bevelSize:.05,bevelThickness:.05}),M(0xff3b7a,{r:.3,e:0x66001a,ei:.4})); hm.position.set(0,3,throneZ-.85); candy.add(hm);
+  DRECT.push({x1:-1.2,z1:throneZ-.95,x2:1.2,z2:throneZ+.45,on:true}); }
+const cQueen=new THREE.Group(); cQueen.position.set(0,1.2,throneZ-.1); candy.add(cQueen);
+{ const dress=new THREE.Mesh(new THREE.ConeGeometry(.55,1.1,24),M(0xff8fc8,{r:.5})); dress.position.y=.45; cQueen.add(dress);
+  const torso=CY(.18,.24,.45,M(0xff8fc8,{r:.5}),0,1.1,0,cQueen,16);
+  const hd=new THREE.Mesh(new THREE.SphereGeometry(.24,20,14),M(0xf2c09a,{r:.6})); hd.position.y=1.55; cQueen.add(hd);
+  const hm=M(0xffb0dc,{r:1,e:0xff8fc8,ei:.2}); for(let i=0;i<9;i++){ const a=i/9*6.28; const b=new THREE.Mesh(new THREE.SphereGeometry(.17,12,10),hm); b.position.set(Math.cos(a)*.2,1.6+Math.sin(i)*.08,Math.sin(a)*.2-.06); cQueen.add(b); }
+  const cr=new THREE.Mesh(new THREE.CylinderGeometry(.16,.13,.14,8,1,true),M(0xffd23b,{m:.8,r:.25,env:1.4,side:THREE.DoubleSide})); cr.position.y=1.86; cQueen.add(cr);
+  for(const s of [-1,1]){ const e=new THREE.Mesh(new THREE.SphereGeometry(.03,8,6),M(0x2a1a2a)); e.position.set(s*.08,1.58,.22); cQueen.add(e); }
+  const wand=CY(.015,.015,.6,M(0xffffff),.32,1.1,.15,cQueen,6); wand.rotation.z=-.4; const ws=new THREE.Mesh(new THREE.OctahedronGeometry(.08),M(0xffd23b,{e:0xffd23b,ei:.8})); ws.position.set(.44,1.38,.15); cQueen.add(ws); }
+dact(cQueen,'reinaC',new THREE.Vector3(0,3.3,throneZ-.1));
+// la sonrisa de J en un frasco de cristal
+const smileJar=new THREE.Group(); smileJar.position.set(0,dG(0,-21.6),-21.6); candy.add(smileJar);
+{ CY(.5,.6,.9,M(0xffd0ea,{r:.5}),0,.45,0,smileJar,20); CY(.45,.45,1.1,M(0xffffff,{r:.05,tr:true,op:.25,env:1.6,dw:false}),0,1.45,0,smileJar,24);
+  const lid=CY(.5,.5,.14,M(0xff4f9a,{r:.35}),0,2.05,0,smileJar,24); smileJar.userData.lid=lid; DCIRC.push({x:0,z:-21.6,r:.65}); }
+const smile=new THREE.Group(); smile.position.set(0,dG(0,-21.6)+1.45,-21.6); candy.add(smile);
+{ const lip=M(0xff3b6a,{r:.25,env:1,e:0xb0103a,ei:.5});
+  const low=new THREE.Mesh(new THREE.TorusGeometry(.3,.065,12,32,Math.PI),lip); low.rotation.z=Math.PI; smile.add(low);
+  const up=new THREE.Mesh(new THREE.TorusGeometry(.3,.04,10,32,Math.PI),lip); up.scale.y=.25; up.rotation.z=Math.PI; up.position.y=.0; smile.add(up);
+  const teeth=new THREE.Mesh(new THREE.CircleGeometry(.27,24,Math.PI,Math.PI),M(0xffffff,{r:.2,e:0xffffff,ei:.25,side:THREE.DoubleSide})); teeth.scale.y=.55; teeth.position.z=-.01; smile.add(teeth);
+  for(const s of [-1,1]){ const d=new THREE.Mesh(new THREE.SphereGeometry(.05,10,8),lip); d.position.set(s*.31,.02,0); smile.add(d); }
+  const gl=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:0xff9ac8,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false})); gl.scale.setScalar(1.4); smile.add(gl); }
+dact(smile,'sonrisa',new THREE.Vector3(0,dG(0,-21.6)+2.5,-21.6));
+// portales
+const backPortalD=makePortal(candy,0xff7ec8); backPortalD.scale.set(.6,.85,1); backPortalD.position.set(0,dG(0,17)+1.05,17); dact(backPortalD,'volverMar');
+const cityPortal=makePortal(candy,0x3bf0ff); cityPortal.scale.set(.8,1.1,1); cityPortal.position.set(-4.2,dG(-4.2,-22.5)+1.3,-22.5); cityPortal.rotation.y=.6; cityPortal.visible=false; dact(cityPortal,'portal5',new THREE.Vector3(-4.2,dG(-4.2,-22.5)+2.6,-22.5));
+
+// ---------- jugador en los dulces ----------
+let poisonT=0;
+function placeDulcesStart(restore){
+  if(restore&&S.dp){ DP.x=S.dp[0]; DP.y=S.dp[1]; DP.z=S.dp[2]; yaw=S.dp[3]||0; } else { DP.x=0; DP.z=14; DP.y=dG(0,14); yaw=0; pitch=-.05; }
+  DP.vy=0; DP.on=null; DP.gr=true; DP.safe=[DP.x,DP.y,DP.z]; camera.position.set(DP.x,DP.y+1.6,DP.z); camera.rotation.set(pitch,yaw,0);
+}
+function dSupport(x,z,y){ let best=dG(x,z), bp=null; for(const p of DPL){ if(Math.hypot(x-p.x,z-p.z)<p.r&&p.top<=y+.35&&p.top>best){ best=p.top; bp=p; } } return [best,bp]; }
+function dCollide(p,y){ const R=.3;
+  for(const c of DCIRC){ const dx=p.x-c.x, dz=p.z-c.z, d=Math.hypot(dx,dz), m=c.r+R; if(d<m&&d>1e-6){ p.x=c.x+dx/d*m; p.z=c.z+dz/d*m; } }
+  for(const c of DPL){ if(y<c.top-.35&&y+1.7>c.bot){ const dx=p.x-c.x, dz=p.z-c.z, d=Math.hypot(dx,dz), m=c.r+R*.6; if(d<m&&d>1e-6){ p.x=c.x+dx/d*m; p.z=c.z+dz/d*m; } } }
+  for(const r of DRECT){ if(!r.on) continue; const qx=Math.max(r.x1,Math.min(p.x,r.x2)), qz=Math.max(r.z1,Math.min(p.z,r.z2)); const dx=p.x-qx, dz=p.z-qz, d2=dx*dx+dz*dz;
+    if(d2<R*R){ if(d2>1e-9){ const d=Math.sqrt(d2); p.x=qx+dx/d*R; p.z=qz+dz/d*R; } else { const o=[[p.x-r.x1,-1,0],[r.x2-p.x,1,0],[p.z-r.z1,0,-1],[r.z2-p.z,0,1]].sort((a,b)=>a[0]-b[0])[0]; if(o[1]) p.x=o[1]<0?r.x1-R:r.x2+R; else p.z=o[2]<0?r.z1-R:r.z2+R; } } }
+  const dx=p.x, dz=p.z+3, d=Math.hypot(dx,dz); if(d>24){ p.x=dx/d*24; p.z=-3+dz/d*24; } }
+function dulcesStep(dt,mx,my,l,T){
+  if(DP.on){ DP.x+=DP.on.dx; DP.z+=DP.on.dz; DP.y+=DP.on.dy; }
+  if(l>.05){ const s=2.8*dt, fx=-Math.sin(yaw), fz=-Math.cos(yaw), rx=Math.cos(yaw), rz=-Math.sin(yaw); const p={x:DP.x+(fx*my+rx*mx)*s, z:DP.z+(fz*my+rz*mx)*s}; dCollide(p,DP.y); DP.x=p.x; DP.z=p.z;
+    if(DP.gr){ bob+=dt*9*l; stepT+=dt*l; if(stepT>.45){ stepT=0; sfx('step'); } } }
+  if(jumpReq&&(DP.gr||DP.coy>0)){ DP.vy=5.5; DP.gr=false; DP.on=null; DP.coy=0; sfx('jump'); }
+  jumpReq=false;
+  const was=DP.gr; DP.vy-=7*dt; DP.y+=DP.vy*dt;
+  const [best,bp]=dSupport(DP.x,DP.z,DP.y);
+  if(DP.vy<=0&&(DP.y<=best+.02||(was&&DP.y<=best+.3))){
+    if(!was&&DP.vy<-4) sfx('land'); DP.y=best; DP.vy=0; DP.gr=true; DP.on=bp; DP.coy=.12;
+    if(bp&&bp.tramp){ DP.vy=12; DP.gr=false; DP.on=null; bp.squash=1; note(260,.12,.12); setTimeout(()=>note(520,.25,.1),90); if(!S.f.boing){ S.f.boing=1; save(); toast('¡BOING! 🟢 Muévete en el aire hacia la nube…',3000); } }
+    else if(bp&&bp.cloud&&!S.f.v_nube){ S.f.v_nube=1; save(); toast('☁️ ¡Estás en una nube de algodón de azúcar!'); }
+    if(!bp&&best<-.5) chocoFall(); else if(!bp||(!bp.slide&&!bp.sink&&!bp.tramp)) DP.safe=[DP.x,DP.y,DP.z];
+  } else { DP.gr=false; DP.on=null; DP.coy-=dt; }
+  if(DP.y<-.55&&!switching) chocoFall();
+  if(poisonT>0) poisonT-=dt;
+  const pz=poisonT>0?Math.sin(T*3)*.08*Math.min(1,poisonT):0;
+  camera.position.set(DP.x,DP.y+1.6+(DP.gr?Math.sin(bob)*.03:0),DP.z); camera.rotation.set(pitch+(poisonT>0?Math.sin(T*2.3)*.05*Math.min(1,poisonT):0),yaw,pz);
+  if(cityPortal.visible&&Math.hypot(DP.x-cityPortal.position.x,DP.z-cityPortal.position.z)<.8) doAct('portal5');
+  if(Math.hypot(DP.x-backPortalD.position.x,DP.z-backPortalD.position.z)<.55) doAct('volverMar');
+}
+function chocoFall(){ if(switching) return; switching=true; sfx('bad'); $('#fade').style.background='#4a2410'; $('#fade').classList.add('on');
+  setTimeout(()=>{ DP.x=DP.safe[0]; DP.y=DP.safe[1]+.05; DP.z=DP.safe[2]; DP.vy=0; DP.on=null; DP.gr=true; $('#fade').classList.remove('on'); switching=false; setTimeout(()=>$('#fade').style.background='#000',400); toast('¡Splash! 🍫 Te caíste al río de chocolate…'); },650); }
+let lastT=0;
+function updateDulces(dt,T){
+  chocU.t.value=T; backPortalD.userData.u.t.value=T; cityPortal.userData.u.t.value=T;
+  for(const c of COOK){ const ox=c.x, oz=c.z, ot=c.top; if(c.slide) c.z=c.bz+Math.sin(T*.8+c.ph)*c.slide; if(c.sink) c.top=-.1+Math.sin(T*1.1+c.ph)*.12;
+    c.dx=c.x-ox; c.dz=c.z-oz; c.dy=c.top-ot; c.mesh.position.set(c.x,c.top-.12,c.z); c.mesh.rotation.y+=dt*.2; }
+  tramp.squash=Math.max(0,(tramp.squash||0)-dt*3); trampM.scale.set(1+tramp.squash*.25,1-tramp.squash*.5,1+tramp.squash*.25);
+  { const oy=CLOUD.top; CLOUD.top=7.2+Math.sin(T*.7)*.25; CLOUD.bot=CLOUD.top-.7; CLOUD.dy=CLOUD.top-oy; cloudM.position.y=CLOUD.top-.4; if(mint.visible&&!busy){ mint.position.y=CLOUD.top+.45+Math.sin(T*2)*.05; mint.rotation.y=T*.8; } }
+  gomi.position.y=dG(2.2,11)+Math.abs(Math.sin(T*2.4))*.12; gomi.scale.y=1-Math.abs(Math.cos(T*2.4))*.04; { const dx=camera.position.x-gomi.position.x, dz=camera.position.z-gomi.position.z; gomi.rotation.y=Math.atan2(dx,dz); }
+  ginger.position.y=dG(2.3,-18.4)+Math.abs(Math.sin(T*1.6))*.04; cQueen.rotation.y=Math.sin(T*.6)*.25;
+  lollis.forEach((g,i)=>g.userData.disc.rotation.z=T*.4*(i%2?1:-1));
+  skyClouds.forEach(c=>{ c.g.position.y+=Math.sin(T*.3+c.ph)*.003; });
+  if(fresa.visible&&!busy) fresa.rotation.y=T; if(lemon.visible&&!busy){ lemon.rotation.y=T; lemon.position.y=CK.y+6.05+Math.sin(T*2)*.06; }
+  if(smile.visible&&!busy){ smile.position.y=dG(0,-21.6)+1.45+Math.sin(T*1.8)*.08; smile.rotation.y=Math.sin(T*.9)*.5; }
+  if(Math.random()<.35) emit(new THREE.Vector3(0,dG(0,0)+1.15,0).add(new THREE.Vector3((Math.random()-.5)*.6,0,(Math.random()-.5)*.6)),{color:potLiquid.material.color.getHex(),vel:[0,.5,0],spread:.12,life:1.2,size:.05,op:.8});
+  if(Math.random()<.15){ const a=Math.random()*6.28, r=Math.random()*14; emit(new THREE.Vector3(camera.position.x+Math.cos(a)*r,camera.position.y+3+Math.random()*3,camera.position.z+Math.sin(a)*r),{color:[0xff7eb6,0x5ad0ff,0xffd23b,0x7be38a,0xffffff][Math.floor(Math.random()*5)],vel:[0,-.4,0],spread:.2,life:4,size:.05}); }
+  if(cityPortal.visible&&Math.random()<.4) emit(cityPortal.position.clone().add(new THREE.Vector3((Math.random()-.5)*1.4,(Math.random()-.5)*2,.1)),{color:0x8af8ff,vel:[0,.4,.3],spread:.3,life:1.2,size:.05});
+}
+function goDulces(){ switchWorld('dulces',()=>placeDulcesStart(false),()=>{ if(!S.f.llegoDulces){ S.f.llegoDulces=1; save();
+  say('🍭 ¡Llegaste al Mundo de Dulces!','Todo aquí es de azúcar: el piso es glaseado, el río es de chocolate y las nubes son de algodón de azúcar ☁️.<br><br>Aquí está escondida <b>mi sonrisa</b> 😄. Habla con el osito de gomita, él te explica.<br><br>Aquí vas a necesitar el botón <b>⤴ SALTAR</b> otra vez.'); } }); }
+function dulcesHint(){
+  if(!S.f.gomi) return 'Habla con Gomi, el osito de gomita rojo que está cerca de donde llegaste 🐻.';
+  if(!S.f.receta) return 'Lee el libro de recetas que está al lado de Gomi 📖.';
+  if(!S.f.pastel){ const m=[]; if(!S.f.i_fresa) m.push('🍓 cruza el río de chocolate saltando por las galletas (una se mueve y otra se hunde un poquito)');
+    if(!S.f.i_naranja) m.push('🍊 frascos de la bruja: lee el letrero. Las puntas son el 1 y el 5; el color de las hojas es el verde'); if(!S.f.i_limon) m.push('🍋 sube al pastel gigante: empieza por la gomita azul que está al lado');
+    if(!S.f.i_menta) m.push('🌿 salta en la gomita verde que dice BOING y muévete hacia la nube mientras vuelas');
+    if(m.length) return 'Te falta: '+m.join(' · ');
+    return 'En la olla, debajo del arcoíris 🌈: rojo, naranja, amarillo, verde → 🍓 fresa, 🍊 naranja, 🍋 limón, 🌿 menta.'; }
+  if(!S.f.reja) return 'Llévale el pastel 🎂 a Don Jengibre, el guardia de la puerta del castillo.';
+  if(!S.f.reinaOk) return 'Habla con la Reina Caramelo. Pista: lo más dulce de este mundo no es un dulce 😉';
+  if(!S.f.sonrisa) return 'Toca la sonrisa que salió del frasco.';
+  return 'Entra al portal azul brillante que se abrió dentro del castillo.';
+}
+function takeIng(k,obj){ if(S.f['i_'+k]) return; S.f['i_'+k]=1; save(); flyToCam(obj,()=>give(k)); }
+function openPotUI(){
+  const E={fresa:'🍓',naranja:'🍊',limon:'🍋',menta:'🌿'}; let placed=[];
+  const draw=b=>{ b.querySelector('#slots').innerHTML=RECIPE.map((_,i)=>`<div style="width:50px;height:50px;border-radius:14px;border:3px dashed #ff9ac8;display:flex;align-items:center;justify-content:center;font-size:30px;background:#3a1a3a">${placed[i]?E[placed[i]]:''}</div>`).join('');
+    const mine=RECIPE.filter(k=>has(k)&&!placed.includes(k));
+    b.querySelector('#mine').innerHTML=mine.length?mine.map(k=>`<button data-ing="${k}" style="width:56px;height:56px;border-radius:14px;border:2px solid #fff6;background:#5a2a5a;font-size:30px;cursor:pointer;margin:4px">${E[k]}</button>`).join(''):(placed.length?'':'<p style="color:#b9a8d6">No tienes ingredientes todavía…</p>');
+    b.querySelectorAll('[data-ing]').forEach(x=>x.onclick=()=>{ sfx('pour'); placed.push(x.dataset.ing); potLiquid.material.color.set({fresa:0xff3b4f,naranja:0xff8a2b,limon:0xffd23b,menta:0x5be38a}[x.dataset.ing]); draw(b);
+      if(placed.length===4){ if(placed.join()===RECIPE.join()){ setTimeout(()=>{ closeModal(); bakeCake(); },500); }
+        else { sfx('puff'); b.querySelector('#potMsg').textContent='💨 ¡Puf! Salió humo negro… ese no es el orden.'; for(let i=0;i<30;i++) emit(new THREE.Vector3(0,dG(0,0)+1.3,0),{color:0x333333,vel:[0,1.2,0],spread:.6,life:1.5,size:.12,op:.7}); setTimeout(()=>{ placed=[]; potLiquid.material.color.set(0xff7eb6); draw(b); },900); } }
+      else if(placed.length===RECIPE.filter(k=>has(k)).length) b.querySelector('#potMsg').textContent=`Faltan ${4-placed.length} ingrediente(s)…`; }); };
+  const n=RECIPE.filter(k=>has(k)).length;
+  modal(`<h2>🫕 La olla mágica</h2><p>${n<4?`Tienes ${n} de 4 ingredientes.`:'Échalos uno por uno. ¿En qué orden?'}</p><div id="slots" style="display:flex;gap:8px;justify-content:center;margin:12px 0"></div>
+    <div id="mine" style="min-height:64px"></div><p id="potMsg" style="min-height:22px;color:#ffb3b3"></p><button class="btn sec" id="potOut">Vaciar</button><button class="btn sec" onclick="closeModal()">Cerrar</button>`,b=>{ draw(b); b.querySelector('#potOut').onclick=()=>{ placed=[]; potLiquid.material.color.set(0xff7eb6); draw(b); b.querySelector('#potMsg').textContent=''; }; });
+}
+function bakeCake(){ S.f.pastel=1; RECIPE.forEach(k=>take(k)); save(); sfx('magic'); busy=true;
+  for(let i=0;i<60;i++) emit(new THREE.Vector3(0,dG(0,0)+1.3,0),{color:[0xff3b4f,0xff8a2b,0xffd23b,0x5be38a,0x3b8bff,0xb57bff][i%6],vel:[0,2,0],spread:1.4,life:1.6,size:.08});
+  cakeItem.position.set(0,dG(0,0)+1,0); cakeItem.scale.setScalar(.01); cakeItem.visible=true;
+  anim(1.4,t=>{ cakeItem.position.y=dG(0,0)+1+ease(t)*1.1; cakeItem.scale.setScalar(Math.max(.01,ease(t)*1.4)); cakeItem.rotation.y=t*6; },()=>{ busy=false; flyToCam(cakeItem,()=>{ give('pastel'); toast('¡Te salió un Pastel Mágico! 🎂✨ Llévaselo a Don Jengibre.',3500); }); }); }
+function openGate(animate){ gateR.on=false; if(animate){ sfx('creak'); anim(2,t=>gate.position.y=ease(t)*2.7); } else gate.position.y=2.7; }
+function openSmileJar(animate){ const lid=smileJar.userData.lid; if(animate){ sfx('open'); anim(1,t=>{ lid.position.y=2.05+ease(t)*1.2; lid.rotation.x=ease(t)*2; lid.material.opacity=1-t; lid.material.transparent=true; },()=>lid.visible=false); for(let i=0;i<40;i++) emit(new THREE.Vector3(0,dG(0,-21.6)+2,-21.6),{color:i%2?0xff9ac8:0xffffff,vel:[0,1.4,0],spread:1.2,life:1.4,size:.06}); } else lid.visible=false; }
+function collectSmile(){
+  if(S.f.sonrisa) return; S.f.sonrisa=1; if(!S.parts.includes('sonrisa')) S.parts.push('sonrisa'); save();
+  flyToCam(smile,()=>{ sfx('ok'); updHud();
+    modal(`<div style="font-size:54px">😄</div><h2>¡Encontraste mi sonrisa!</h2>
+      <div class="letter" style="text-align:center;font-size:26px">"Esta sonrisa no es mía, es tuya. Tú eres la que me la saca todos los días."<br>— ${P.yo} ❤️</div>
+      <p>🧩 Partes de J: <b>${S.parts.length}/7</b></p><button class="btn" id="okSm">Seguir</button>`,b=>{
+      b.querySelector('#okSm').onclick=()=>{ closeModal(); cityPortal.visible=true; cityPortal.scale.set(.01,.01,1); anim(1.2,t=>cityPortal.scale.set(Math.max(.01,.8*ease(t)),Math.max(.01,1.1*ease(t)),1)); toast('Se abrió un portal azul brillante al lado del trono ✨',3500); }; });
+  });
+}
+function poisoned(i){ sfx('bad'); poisonT=3; S.f.envenenada=(S.f.envenenada||0)+1; save();
+  const g=jarObjs[i]; anim(.5,t=>g.rotation.z=Math.sin(t*Math.PI*6)*.15*(1-t));
+  $('#fade').style.background='#4fd04f'; $('#fade').classList.add('on'); setTimeout(()=>{ $('#fade').classList.remove('on'); setTimeout(()=>$('#fade').style.background='#000',400); },180);
+  toast(['🤢 ¡Puaj! Ese dulce estaba envenenado… te dio dolor de barriga.','🤢 ¡Ay no, Amorsh! Ese no era. Lee bien el letrero…','🤮 ¡Guácala! Otra vez veneno… piensa con calma.'][Math.min(2,S.f.envenenada-1)],3200); }
+Object.assign(ACT,{
+  gomi(){ S.f.gomi=1; save(); sfx('tap');
+    say('🐻 Gomi, el osito de gomita',`¡Holiii, ${P.ella}! Soy Gomi 🐻.<br><br>La <b>Reina Caramelo</b> se quedó con la sonrisa de J y la tiene en su castillo, allá al fondo 🏰. Pero el guardia, <b>Don Jengibre</b>, solo deja entrar a quien le traiga un <b>Pastel Mágico</b> 🎂.<br><br>La receta está en el libro de aquí al lado 📖. ¡Ah! Y aquí todo rebota… usa <b>⤴ SALTAR</b>.`); },
+  receta(){ S.f.receta=1; save(); sfx('open');
+    modal(`<h2>📖 Receta del Pastel Mágico</h2><div class="letter" style="font-size:22px;text-align:left">
+      🌿 1 hoja de <b>menta</b> — en las nubes de algodón de azúcar.<br>🍋 1 caramelo de <b>limón</b> — en la punta del pastel más alto.<br>🍓 1 <b>fresa</b> gigante — al otro lado del río de chocolate.<br>🍊 1 gomita de <b>naranja</b> — en los frascos de la bruja (¡cuidado, hay veneno!).<br><br>
+      Échalos en la <b>olla mágica</b> uno por uno, en el mismo orden que los colores del <b>arcoíris</b> 🌈.</div><button class="btn" onclick="closeModal()">OK</button>`); },
+  fresa(){ takeIng('fresa',fresa); },
+  limon(){ takeIng('limon',lemon); },
+  menta(){ takeIng('menta',mint); },
+  letreroBruja(){ S.f.bruja=1; save();
+    say('🧙‍♀️ Los frascos de la Bruja de Regaliz','Solo <b>UNO</b> de los 5 frascos tiene la gomita buena. Los demás… ¡envenenados! ☠️<br><br>1. No está en ninguna de las dos puntas.<br>2. Está justo al lado de un frasco con tapa <b>rosada</b> o <b>amarilla</b>.<br>3. Su tapa no es del color de las hojas.'); },
+  olla(){ if(S.f.pastel) return toast('La olla sigue burbujeando… 🫕'); if(!S.f.receta) return toast('Una olla mágica… ¿qué se cocinará aquí? Busca una receta 📖'); openPotUI(); },
+  jengibre(){ if(S.f.reja) return toast('Don Jengibre: «¡Mmm, qué pastel tan rico! Pase, pase» 🍪');
+    if(!has('pastel')) return say('🍪 Don Jengibre','¡Alto ahí! ✋ Nadie entra al Castillo Caramelo sin traerme un <b>Pastel Mágico</b>.<br><br>Llevo cien años cuidando esta puerta… ¡y tengo mucha hambre! 😩');
+    take('pastel'); S.f.reja=1; save(); sfx('ok'); busy=true; cakeItem.visible=true; cakeItem.scale.setScalar(1); cakeItem.position.set(2.3,dG(2.3,-18.4)+1.6,-17.9);
+    anim(1.6,t=>{ cakeItem.scale.setScalar(Math.max(.01,1-t)); ginger.rotation.z=Math.sin(t*20)*.08; },()=>{ cakeItem.visible=false; ginger.rotation.z=0; busy=false;
+      say('🍪 Don Jengibre','¡ÑAM ÑAM ÑAM! 😋 ¡El mejor pastel de mi vida!<br><br>Pase, señorita. La Reina la está esperando…',' Entrar'); openGate(true); }); },
+  reinaC(){ if(!S.f.reja) return toast('La reina está muy lejos… primero tienes que entrar al castillo.'); if(S.f.reinaOk) return toast('La Reina Caramelo te sonríe 👑');
+    const ops=['El chocolate 🍫','El pastel mágico 🎂','Los caramelos 🍬','Tú 💗'].sort(()=>Math.random()-.5);
+    modal(`<h2>👑 La Reina Caramelo</h2><p>Ay, qué linda… así que tú eres <b>${P.ella}</b>. J me habló mucho de ti.</p><p>Te devuelvo su sonrisa si me respondes una sola pregunta:</p><p style="font-size:20px"><b>¿Qué es lo más dulce de todo este mundo?</b></p>
+      <div id="qOps">${ops.map(o=>`<button class="btn sec" style="display:block;width:100%;margin:6px 0" data-o="${o}">${o}</button>`).join('')}</div><p id="qMsg" style="min-height:22px;color:#ffb3b3"></p>`,b=>{
+      b.querySelectorAll('[data-o]').forEach(x=>x.onclick=()=>{ if(x.dataset.o.startsWith('Tú')){ S.f.reinaOk=1; save(); sfx('ok');
+          b.innerHTML=`<h2>👑 La Reina Caramelo</h2><p>¡Exacto! 💗 Eso mismo dice J todo el tiempo… que no hay nada más dulce que tú.</p><p>Aquí tienes: su sonrisa es tuya.</p><button class="btn" id="qOk">Gracias, Reina</button>`;
+          b.querySelector('#qOk').onclick=()=>{ closeModal(); openSmileJar(true); toast('El frasco se abrió… ¡la sonrisa está libre! 😄',3200); }; }
+        else { sfx('bad'); x.disabled=true; x.style.opacity=.4; b.querySelector('#qMsg').textContent=['Mmm… no. Hay algo muchísimo más dulce 🤭','¿En serio, Amorsh? 😒 Piensa en lo que diría J…','Nooo… algo más dulce que cualquier dulce.'][Math.floor(Math.random()*3)]; } }); }); },
+  sonrisa(){ if(!S.f.reinaOk) return toast('La sonrisa está dentro de un frasco cerrado… 🫙 La Reina tiene la llave.'); collectSmile(); },
+  volverMar(){ if(switching) return; switchWorld('mar',()=>{ MP.x=4; MP.z=-7.6; yaw=0; pitch=0; camera.position.set(MP.x,sH(MP.x,MP.z)+1.6,MP.z); }); },
+  portal5(){ if(switching||$('#fin').style.display==='flex') return; sfx('magic');
+    showFin(`<div style="font-size:64px">🌆</div><h2 style="margin:8px 0">¡Mundo 4 completo, ${P.apodo}!</h2>
+      <p style="color:#d9c8ff">🧩 Partes de J: <b>${S.parts.length}/7</b> · ⏱ <b>${fmt(S.t)}</b> · 💡 <b>${S.hints}</b></p>
+      <p style="color:#d9c8ff;max-width:320px">El portal brillante te lleva a la <b>🌆 Ciudad Futurista</b>, donde están mis manos 🤲.</p>
+      <p style="color:#9a88b8;font-size:14px">(Este mundo todavía se está construyendo ✨)</p><button class="btn sec" id="backD">Volver a los dulces</button>`);
+    $('#backD').onclick=()=>{ $('#fin').style.display='none'; DP.x=-2.6; DP.z=-21; DP.y=dG(-2.6,-21); yaw=-.6; }; },
+});
+JARS.forEach((j,i)=>{ ACT['frasco'+i]=()=>{ if(S.f.i_naranja) return toast('Ya tienes la gomita buena 🍊'); if(!S.f.bruja) return toast('Mejor lee primero el letrero de la bruja… 🧙‍♀️');
+  if(i!==GOOD_JAR) return poisoned(i);
+  sfx('open'); const g=jarObjs[i]; anim(.6,t=>{ g.userData.lid.position.y=.55+ease(t)*.6; g.userData.lid.rotation.x=ease(t)*1.5; },()=>{ g.userData.lid.visible=false; takeIng('naranja',g.userData.gum); }); }; });
+function applyDulcesState(){ const f=S.f;
+  if(f.i_fresa) fresa.visible=false; if(f.i_limon) lemon.visible=false; if(f.i_menta) mint.visible=false;
+  if(f.i_naranja){ const g=jarObjs[GOOD_JAR]; g.userData.lid.visible=false; g.userData.gum.visible=false; }
+  if(f.reja) openGate(false); if(f.reinaOk) openSmileJar(false); if(f.sonrisa){ smile.visible=false; cityPortal.visible=true; } }
+applyDulcesState();
+if(S.f.espinas&&has('flauta')) take('flauta');
+Object.assign(window.G,{goDulces:()=>goDulces(), DP:()=>DP, dtp:(x,z,y,yy)=>{ DP.x=x; DP.z=z; DP.y=yy??dG(x,z); DP.vy=0; if(y!==undefined) yaw=y; }, dstep:(n,mx,my,jump)=>{ for(let i=0;i<n;i++){ if(jump&&i===0) jumpReq=true; dulcesStep(1/60,mx,my,Math.min(1,Math.hypot(mx,my)),performance.now()/1000); } }, dG:(x,z)=>dG(x,z)});
+
 
 // ================== ESTADO INICIAL ==================
 function applyState(){
@@ -1536,7 +1916,7 @@ function loop(){
   const dt=Math.min(.05,clock.getDelta()), T=clock.elapsedTime;
   for(let i=ANIMS.length-1;i>=0;i--){ const a=ANIMS[i]; a.t+=dt; const k=Math.min(1,a.t/a.dur); a.fn(k); if(k>=1){ ANIMS.splice(i,1); a.done&&a.done(); } }
   // movimiento
-  if(WORLD==='espacio') updateSpace(dt,T); if(WORLD==='bosque') updateForest(dt,T); if(WORLD==='mar') updateSea(dt,T);
+  if(WORLD==='espacio') updateSpace(dt,T); if(WORLD==='bosque') updateForest(dt,T); if(WORLD==='mar') updateSea(dt,T); if(WORLD==='dulces') updateDulces(dt,T);
   const canMove=!focus&&!busy&&!modalOpen()&&S.started&&$('#fin').style.display!=='flex'&&$('#tele').style.display!=='flex'&&!switching;
   if(WORLD==='espacio'){ let mx=move.x, my=move.y;
     if(keys.w||keys.arrowup) my=1; if(keys.s||keys.arrowdown) my=-1; if(keys.a||keys.arrowleft) mx=-1; if(keys.d||keys.arrowright) mx=1;
@@ -1544,6 +1924,9 @@ function loop(){
   } else if(WORLD==='mar'){ let mx=move.x, my=move.y;
     if(keys.w||keys.arrowup) my=1; if(keys.s||keys.arrowdown) my=-1; if(keys.a||keys.arrowleft) mx=-1; if(keys.d||keys.arrowright) mx=1;
     if(!canMove) mx=my=0; seaStep(dt,mx,my,Math.min(1,Math.hypot(mx,my)),T);
+  } else if(WORLD==='dulces'){ let mx=move.x, my=move.y;
+    if(keys.w||keys.arrowup) my=1; if(keys.s||keys.arrowdown) my=-1; if(keys.a||keys.arrowleft) mx=-1; if(keys.d||keys.arrowright) mx=1;
+    if(!canMove){ mx=my=0; jumpReq=false; } dulcesStep(dt,mx,my,Math.min(1,Math.hypot(mx,my)),T);
   } else if(WORLD==='bosque'){ if(canMove){ let mx=move.x, my=move.y;
     if(keys.w||keys.arrowup) my=1; if(keys.s||keys.arrowdown) my=-1; if(keys.a||keys.arrowleft) mx=-1; if(keys.d||keys.arrowright) mx=1;
     forestStep(dt,mx,my,Math.min(1,Math.hypot(mx,my))); }
@@ -1575,7 +1958,7 @@ function loop(){
   renderer.render(activeScene(),camera);
 }
 camera.position.set(player.x,1.6,player.z); camera.rotation.set(pitch,yaw,0);
-if(WORLD==='espacio') placeSpaceStart(true); if(WORLD==='bosque') placeForestStart(true); if(WORLD==='mar') placeSeaStart(true);
+if(WORLD==='espacio') placeSpaceStart(true); if(WORLD==='bosque') placeForestStart(true); if(WORLD==='mar') placeSeaStart(true); if(WORLD==='dulces') placeDulcesStart(true);
 renderInv(); updHud(); loop();
 
 // ================== INTRO ==================
