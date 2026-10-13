@@ -106,8 +106,8 @@ const FRESH=()=>({started:false, inv:[], f:{}, t:0, hints:3, mir:Array(11).fill(
 let S=FRESH(), sel=null;
 if (/[?&]reset=1/.test(location.search)) { try{localStorage.removeItem(KEY)}catch(e){} }
 try{ const d=JSON.parse(localStorage.getItem(KEY)); if(d&&d.started) S=Object.assign(FRESH(),d); }catch(e){}
-let WORLD=S.world||'casa', SP=null; const activeScene=()=>WORLD==='espacio'?space:WORLD==='bosque'?forest:scene;
-function save(){ S.pos=[+player.x.toFixed(2),+player.z.toFixed(2),+yaw.toFixed(2)]; if(SP&&WORLD==='espacio'&&SP.last) S.sp=[SP.x,SP.y,SP.z].map(v=>+v.toFixed(2)); if(WORLD==='bosque'&&typeof FP!=='undefined') S.fp=[FP.x,FP.z,yaw].map(v=>+v.toFixed(2)); try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} }
+let WORLD=S.world||'casa', SP=null; const activeScene=()=>WORLD==='espacio'?space:WORLD==='bosque'?forest:WORLD==='mar'?sea:scene;
+function save(){ S.pos=[+player.x.toFixed(2),+player.z.toFixed(2),+yaw.toFixed(2)]; if(SP&&WORLD==='espacio'&&SP.last) S.sp=[SP.x,SP.y,SP.z].map(v=>+v.toFixed(2)); if(WORLD==='bosque'&&typeof FP!=='undefined') S.fp=[FP.x,FP.z,yaw].map(v=>+v.toFixed(2)); if(WORLD==='mar'&&typeof MP!=='undefined') S.mp=[MP.x,MP.z,yaw].map(v=>+v.toFixed(2)); try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} }
 
 const ITEMS={
   carta:{e:'✉️',n:'Carta de J',d:'La carta que te dejé.'},
@@ -170,7 +170,7 @@ setInterval(()=>{ if(!S.started||$('#fin').style.display==='flex'||document.hidd
 function roomOf(z){ return z>-4?'entrada':z>-12?'espejos':'lab'; }
 const ROOMNAME={entrada:'🏠 La Entrada',espejos:'🪞 Cuarto de Espejos',lab:'🧪 Laboratorio'};
 function hintText(){
-  if(WORLD==='espacio') return spaceHint(); if(WORLD==='bosque') return forestHint();
+  if(WORLD==='espacio') return spaceHint(); if(WORLD==='bosque') return forestHint(); if(WORLD==='mar') return seaHint();
   const f=S.f, r=roomOf(player.z);
   if(r==='entrada'){
     if(!f.carta) return 'Empieza por la carta que está en el piso. Busca los brillitos ✦.';
@@ -207,7 +207,7 @@ $('#menuBtn').onclick=()=>{
     });
   });
 };
-function updHud(){ $('#hintBtn').textContent='💡 '+S.hints; $('#timer').textContent='⏱ '+fmt(S.t); $('#roomName').textContent=WORLD==='espacio'?'🌌 El Espacio':WORLD==='bosque'?'🌲 Bosque Mágico':ROOMNAME[roomOf(player.z)];
+function updHud(){ $('#hintBtn').textContent='💡 '+S.hints; $('#timer').textContent='⏱ '+fmt(S.t); $('#roomName').textContent=WORLD==='espacio'?'🌌 El Espacio':WORLD==='bosque'?'🌲 Bosque Mágico':WORLD==='mar'?'🌊 Bajo el Mar':ROOMNAME[roomOf(player.z)];
   $('#parts').textContent='🧩 '+S.parts.length+'/7'; $('#parts').style.display=(S.parts.length||WORLD!=='casa')?'inline-block':'none';
   $('#jumpBtn').style.display=WORLD==='espacio'?'block':'none'; }
 function showLetter(){
@@ -524,6 +524,8 @@ function tap(x,y){
   if(modalOpen()||busy||$('#fin').style.display==='flex') return;
   const r=cvs.getBoundingClientRect(); ndc.set((x-r.left)/r.width*2-1,-(y-r.top)/r.height*2+1); ray.setFromCamera(ndc,camera);
   if(focus==='mush'){ const hits=ray.intersectObjects(MUSH.map(m=>m.hit),false); if(hits.length) tapMush(hits[0].object.userData.mush); return; }
+  if(WORLD==='mar'){ const hs=ray.intersectObjects(MINTER,true);
+    for(const h of hs){ let o=h.object; while(o&&!o.userData.act) o=o.parent; if(!o||!o.visible) continue; if(h.distance>5.5){ toast('Acércate más 👣'); return; } doAct(o.userData.act); return; } return; }
   if(WORLD==='bosque'){ const hs=ray.intersectObjects(FINTER,true);
     for(const h of hs){ let o=h.object; while(o&&!o.userData.act) o=o.parent; if(!o||!o.visible) continue; if(h.distance>5.5){ toast('Acércate más 👣'); return; } doAct(o.userData.act); return; } return; }
   if(focus){ const hits=ray.intersectObjects(MIRRORS.map(m=>m.hit),false); if(hits.length) turnMirror(hits[0].object.userData.mirror); return; }
@@ -1226,12 +1228,7 @@ Object.assign(ACT,{
     enterMushFocus(); },
   oidos(){ collectEars(); },
   volverEsp(){ if(switching) return; switchWorld('espacio',()=>{ SP.x=0; SP.z=-48.6; SP.y=PT.top+.3; SP.vy=0; SP.last=PT; yaw=Math.PI; pitch=-.05; }); },
-  portal3(){ if(switching||$('#fin').style.display==='flex') return; sfx('magic');
-    showFin(`<div style="font-size:64px">🌊</div><h2 style="margin:8px 0">¡Mundo 2 completo, ${P.apodo}!</h2>
-      <p style="color:#d9c8ff">🧩 Partes de J: <b>${S.parts.length}/7</b> · ⏱ <b>${fmt(S.t)}</b> · 💡 <b>${S.hints}</b></p>
-      <p style="color:#d9c8ff;max-width:320px">El portal azul te lleva <b>🌊 Bajo el Mar</b>, donde está escondida mi voz 🗣️.</p>
-      <p style="color:#9a88b8;font-size:14px">(Este mundo todavía se está construyendo ✨)</p><button class="btn sec" id="backF">Volver al bosque</button>`);
-    $('#backF').onclick=()=>{ $('#fin').style.display='none'; FP.x=0; FP.z=-23.4; yaw=0; }; },
+  portal3(){ if(switching) return; goMar(); },
 });
 BELLS.forEach((b,i)=>{ ACT['campana'+i]=()=>{ const o=bellObjs[i], n=flk(b.k); note(n.f,1.1); S.f['bell'+i]=1; save();
   o.swing=true; anim(1.4,t=>{ o.pivot.rotation.z=Math.sin(t*Math.PI*6)*.5*(1-t); },()=>o.swing=false);
@@ -1241,6 +1238,280 @@ ITEMS.flauta={e:'🎵',n:'Flauta mágica',d:'Te la dio el búho. Suena precioso.
 function applyForestState(){ if(S.f.espinas) openThorns(false); if(S.f.simon&&!S.f.oidos) ears.visible=true; if(S.f.oidos){ ears.visible=false; seaPortal.visible=true; } }
 applyForestState();
 Object.assign(window.G,{fstep:(n,mx,my)=>{ for(let i=0;i<n;i++) forestStep(1/60,mx,my,1); },goBosque:()=>goBosque(), get FP(){return FP}, tapMush:i=>tapMush(i), get simon(){return simon}, ftp:(x,z,y)=>{FP.x=x;FP.z=z;if(y!==undefined)yaw=y;}, flute:k=>{ const btn=[...document.querySelectorAll('[data-n]')].find(e=>FL[+e.dataset.n].k===k); btn&&btn.click(); }, mushScreen:i=>{ const v=MUSH[i].g.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,.5,0)).project(camera); const r=cvs.getBoundingClientRect(); return [r.left+(v.x+1)/2*r.width, r.top+(1-v.y)/2*r.height]; }});
+
+// ================== MUNDO 3: BAJO EL MAR ==================
+var MP={x:0,z:12};
+const VOZ_URL='voz.mp3';
+const sea=new THREE.Scene(); sea.environment=scene.environment;
+sea.background=new THREE.Color(0x0b4466); sea.fog=new THREE.FogExp2(0x0d4c70,.05);
+const MINTER=[], MCIRC=[], MRECT=[];
+function mact(obj,name,spark){ obj.userData.act=name; MINTER.push(obj); if(spark) addSpark(name,spark,sea); return obj; }
+Object.assign(DONE,{pulpi:()=>S.f.pulpi, caracola:()=>S.f.caracola, almeja:()=>S.f.p_blanca, cangrejo:()=>S.f.p_rosada, perlaDorada:()=>S.f.p_dorada,
+  barril:()=>S.f.p_azul, perlaNegra:()=>S.f.p_negra, cofreMar:()=>S.f.cofreMar, voz:()=>S.f.voz||!S.f.cofreMar, portal4:()=>!S.f.voz, volverBosque:()=>true});
+const PEARLS={blanca:{c:0xf6f6f6,e:'⚪',n:'Perla blanca'},rosada:{c:0xffb3d1,e:'🌸',n:'Perla rosada'},dorada:{c:0xffd166,e:'🟡',n:'Perla dorada'},azul:{c:0x5aa8ff,e:'🔵',n:'Perla azul'},negra:{c:0x2a2a3a,e:'⚫',n:'Perla negra'}};
+for(const [k,v] of Object.entries(PEARLS)) ITEMS['perla_'+k]={e:v.e,n:v.n,d:'Una perla preciosa. Brilla con la luz del agua.'};
+const PEARL_ORDER=['blanca','rosada','dorada','azul','negra'];
+function sH(x,z){ const h=.3*Math.sin(x*.21)*Math.cos(z*.17)+.2*Math.sin(x*.37+z*.29); const dx=Math.max(-1-x,0,x-15), dz=Math.max(-17-z,0,z+11); const d=Math.hypot(dx,dz); return h*Math.min(1,d/3); }
+function makePearl(k,r=.12){ const v=PEARLS[k]; const m=new THREE.Mesh(new THREE.SphereGeometry(r,24,16),M(v.c,{m:.3,r:.12,env:1.6,e:k==='negra'?0x30205a:v.c,ei:k==='negra'?.8:.35})); return m; }
+// suelo de arena + cáusticas
+const seaSandTex=ctex(256,256,g=>{ g.fillStyle="#d8c08a"; g.fillRect(0,0,256,256); for(let i=0;i<3000;i++){ g.fillStyle=Math.random()<.5?'rgba(160,130,80,.35)':'rgba(255,240,200,.35)'; g.fillRect(Math.random()*256,Math.random()*256,2,2); }
+  g.strokeStyle='rgba(150,120,70,.25)'; g.lineWidth=3; for(let i=0;i<14;i++){ g.beginPath(); const y=i*19; g.moveTo(0,y); for(let x=0;x<=256;x+=8) g.lineTo(x,y+Math.sin(x*.06+i)*4); g.stroke(); } },[18,18]);
+{ const geo=new THREE.PlaneGeometry(80,80,80,80); geo.rotateX(-Math.PI/2); const p=geo.attributes.position; for(let i=0;i<p.count;i++) p.setY(i,sH(p.getX(i),p.getZ(i)-4)); geo.computeVertexNormals();
+  const fl=new THREE.Mesh(geo,M(0xffffff,{map:seaSandTex,r:1,env:.3})); fl.position.z=-4; sea.add(fl); }
+const causU={t:{value:0}};
+{ const geo=new THREE.PlaneGeometry(80,80,80,80); geo.rotateX(-Math.PI/2); const p=geo.attributes.position; for(let i=0;i<p.count;i++) p.setY(i,sH(p.getX(i),p.getZ(i)-4)+.03);
+  const c=new THREE.Mesh(geo,new THREE.ShaderMaterial({uniforms:causU,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+   vertexShader:'varying vec3 vP; void main(){ vP=(modelMatrix*vec4(position,1.)).xyz; gl_Position=projectionMatrix*viewMatrix*vec4(vP,1.); }',
+   fragmentShader:'uniform float t; varying vec3 vP; float w(vec2 p){ return sin(p.x+sin(p.y*1.3+t)*1.2)+sin(p.y*1.1+sin(p.x*.9-t*1.2)*1.4); } void main(){ vec2 p=vP.xz*1.1; float c=w(p)+w(p*1.7+3.)*.6; c=pow(max(0.,1.-abs(c)*.9),5.); float f=exp(-length(vP.xz-cameraPosition.xz)*.06); gl_FragColor=vec4(vec3(.55,.85,1.)*c*.55*f,1.); }'}));
+  c.position.z=-4; sea.add(c); }
+sea.add(new THREE.HemisphereLight(0x8fe0ff,0x1a4a5a,1.1));
+{ const d=new THREE.DirectionalLight(0xcff4ff,1.4); d.position.set(10,40,10); sea.add(d); }
+// superficie y rayos de sol
+const surfU={t:{value:0}};
+{ const s=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShaderMaterial({uniforms:surfU,side:THREE.DoubleSide,fog:false,transparent:true,
+   vertexShader:'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+   fragmentShader:'uniform float t; varying vec2 vUv; void main(){ vec2 p=vUv*40.; float c=sin(p.x+sin(p.y+t)*1.5)*sin(p.y*1.2+sin(p.x*.8-t)*1.5); vec3 col=mix(vec3(.15,.55,.75),vec3(.75,.95,1.),smoothstep(.3,1.,c)); float a=1.-smoothstep(.0,.5,length(vUv-.5)); gl_FragColor=vec4(col,.9*a+.1); }'}));
+  s.rotation.x=Math.PI/2; s.position.y=16; sea.add(s); }
+const rays=[];
+{ const rt=ctex(64,256,g=>{ const gr=g.createLinearGradient(0,0,0,256); gr.addColorStop(0,'rgba(220,250,255,.55)'); gr.addColorStop(1,'rgba(220,250,255,0)'); g.fillStyle=gr; g.fillRect(0,0,64,256);
+    const gx=g.createLinearGradient(0,0,64,0); gx.addColorStop(0,'rgba(0,0,0,1)'); gx.addColorStop(.5,'rgba(0,0,0,0)'); gx.addColorStop(1,'rgba(0,0,0,1)'); g.globalCompositeOperation='destination-out'; g.fillStyle=gx; g.fillRect(0,0,64,256); });
+  for(let i=0;i<14;i++){ const m=new THREE.Mesh(new THREE.PlaneGeometry(1.5+Math.random()*2,18),new THREE.MeshBasicMaterial({map:rt,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,opacity:.5,fog:false}));
+    m.position.set((Math.random()-.5)*36,7,-4+(Math.random()-.5)*36); m.rotation.set(0,Math.random()*3,.25); sea.add(m); rays.push({m,ph:Math.random()*6}); } }
+// algas
+const kelps=[];
+{ const km=M(0x2f8a4a,{r:.7,e:0x0c3a1a,ei:.6,side:THREE.DoubleSide}), km2=M(0x5aa83a,{r:.7,e:0x1a3a0c,ei:.5,side:THREE.DoubleSide});
+  for(let i=0;i<70;i++){ let x,z; do{ x=(Math.random()-.5)*44; z=-4+(Math.random()-.5)*44; }while(Math.hypot(x,z-10)<5||(x>-1&&x<13.5&&z<-11&&z>-17.5)||Math.hypot(x+6,z+10)<5||Math.hypot(x-9,z)<4||Math.hypot(x+9,z-2)<2.5);
+    const h=2.5+Math.random()*4.5; const g=new THREE.Group(); g.position.set(x,sH(x,z),z); sea.add(g);
+    const pts=[]; for(let k=0;k<=6;k++) pts.push(new THREE.Vector3(Math.sin(k*.8)*.15,k/6*h,Math.cos(k*.7)*.1));
+    const t=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),16,.05,5),i%3?km:km2); g.add(t);
+    for(let k=1;k<6;k++){ const lf=new THREE.Mesh(new THREE.PlaneGeometry(.25,.6),i%3?km:km2); lf.position.set(0,k/6*h,0); lf.rotation.set(0,k*1.3,.6*(k%2?1:-1)); g.add(lf); }
+    kelps.push({g,ph:Math.random()*6,h}); } }
+// corales y rocas
+{ const cols=[0xff6f91,0xffa94d,0xc77dff,0x4dd6ff,0xff4d6d,0xfff07a];
+  for(let i=0;i<55;i++){ let x,z; do{ x=(Math.random()-.5)*42; z=-4+(Math.random()-.5)*42; }while(Math.hypot(x,z-10)<4||(x>-1&&x<13.5&&z<-11&&z>-17.5)||Math.hypot(x-9,z)<3.5||Math.hypot(x,z+22)<3);
+    const c=cols[i%6], m=M(c,{r:.6,e:c,ei:.25}), g=new THREE.Group(); g.position.set(x,sH(x,z),z); sea.add(g); const type=i%4;
+    if(type===0){ for(let k=0;k<5;k++){ const b=CY(.05,.08,.6+Math.random()*.6,m,(Math.random()-.5)*.4,.4,(Math.random()-.5)*.4,g,6); b.rotation.set((Math.random()-.5)*.8,0,(Math.random()-.5)*.8); } }
+    else if(type===1){ const s=new THREE.Mesh(new THREE.SphereGeometry(.45,14,10),m); s.scale.y=.6; s.position.y=.2; g.add(s); }
+    else if(type===2){ for(let k=0;k<3;k++){ const f=new THREE.Mesh(new THREE.CircleGeometry(.4,16,0,Math.PI),M(c,{r:.6,e:c,ei:.25,side:THREE.DoubleSide})); f.position.set((k-1)*.25,.35,0); f.rotation.y=k; g.add(f); } }
+    else { const st=new THREE.Mesh(new THREE.ConeGeometry(.25,.9,7),m); st.position.y=.45; g.add(st); }
+    if(i%5===0) MCIRC.push({x,z,r:.4}); }
+  const rm=M(0x5a6a72,{r:.95}); for(let i=0;i<16;i++){ let x,z; do{ x=(Math.random()-.5)*40; z=-4+(Math.random()-.5)*40; }while(Math.hypot(x,z-10)<5||(x>-2&&x<14&&z<-10&&z>-18.5)||Math.hypot(x+6,z+10)<5);
+    const s=.5+Math.random()*1; const r=new THREE.Mesh(new THREE.IcosahedronGeometry(s,0),rm); r.position.set(x,sH(x,z)+s*.3,z); r.rotation.set(Math.random(),Math.random(),Math.random()); sea.add(r); MCIRC.push({x,z,r:s*.85}); } }
+// peces
+const fishGroups=[];
+{ const fg=new THREE.ConeGeometry(.08,.3,6); fg.rotateZ(-Math.PI/2); const tail=new THREE.ConeGeometry(.07,.12,4); tail.rotateZ(Math.PI/2); tail.translate(-.2,0,0);
+  const geo=fg.clone(); const merged=[geo,tail];
+  for(const [cx,cz,r,y,col,n,sp] of [[0,-4,12,3,0xffc23b,26,.25],[-4,4,7,2,0x5ad0ff,18,-.35],[6,-8,9,4.5,0xff7a5a,22,.2],[2,0,15,6,0xb57bff,16,-.15]]){
+    const im=new THREE.InstancedMesh(fg,M(col,{r:.4,e:col,ei:.25}),n), it=new THREE.InstancedMesh(tail,M(col,{r:.4,e:col,ei:.25}),n); sea.add(im,it);
+    fishGroups.push({im,it,cx,cz,r,y,n,sp,off:Array.from({length:n},()=>[Math.random()*6.28,(Math.random()-.5)*1.6,(Math.random()-.5)*1.2,Math.random()*6])}); } }
+const bubbleT={t:0};
+// pulpo Pulpi
+const pulpi=new THREE.Group(); pulpi.position.set(2.4,sH(2.4,8)+.9,7.6); sea.add(pulpi);
+const tentacles=[];
+{ const pm=M(0xb05ad8,{r:.5,e:0x3a1050,ei:.4}); const head=new THREE.Mesh(new THREE.SphereGeometry(.45,24,18),pm); head.scale.y=1.15; head.position.y=.45; pulpi.add(head);
+  for(const s of [-1,1]){ const w=new THREE.Mesh(new THREE.SphereGeometry(.13,16,12),M(0xffffff,{r:.2})); w.position.set(s*.17,.4,.38); pulpi.add(w); const pu=new THREE.Mesh(new THREE.SphereGeometry(.065,12,8),M(0x111111)); pu.position.set(s*.17,.4,.49); pulpi.add(pu); }
+  const mouth=new THREE.Mesh(new THREE.TorusGeometry(.06,.015,6,12,Math.PI),M(0x5a1a3a)); mouth.position.set(0,.22,.43); mouth.rotation.z=Math.PI; pulpi.add(mouth);
+  for(let i=0;i<8;i++){ const a=i/8*6.28; const piv=new THREE.Group(); piv.position.set(Math.cos(a)*.25,.05,Math.sin(a)*.25); piv.rotation.y=-a; pulpi.add(piv);
+    const segs=[]; let par=piv; for(let k=0;k<4;k++){ const sg=new THREE.Group(); sg.position.x=k?.18:0; par.add(sg); const m=new THREE.Mesh(new THREE.CylinderGeometry(.06-k*.012,.07-k*.012,.2,8),pm); m.rotation.z=Math.PI/2; m.position.x=.09; sg.add(m); segs.push(sg); par=sg; }
+    tentacles.push({segs,ph:a}); } }
+mact(pulpi,'pulpi',new THREE.Vector3(2.4,sH(2.4,8)+2.2,7.6)); MCIRC.push({x:2.4,z:7.6,r:.7});
+// caracola sobre una roca
+{ const r=new THREE.Mesh(new THREE.IcosahedronGeometry(.6,0),M(0x6a7a82,{r:.9})); r.position.set(-2.6,sH(-2.6,8)+.25,8); r.scale.y=.6; sea.add(r); MCIRC.push({x:-2.6,z:8,r:.6}); }
+const conch=new THREE.Group(); conch.position.set(-2.6,sH(-2.6,8)+.62,8); sea.add(conch);
+{ const pts=[]; for(let i=0;i<=20;i++){ const t=i/20; pts.push(new THREE.Vector2(.02+Math.sin(t*Math.PI)*.18*(1-t*.4),t*.55)); }
+  const sh=new THREE.Mesh(new THREE.LatheGeometry(pts,24),M(0xffc2b0,{r:.35,e:0x553028,ei:.25})); sh.rotation.z=Math.PI/2.3; conch.add(sh);
+  const sp=new THREE.Mesh(new THREE.TorusGeometry(.12,.04,8,20),M(0xffd8c8,{r:.4})); sp.position.set(-.05,.08,0); sp.rotation.y=Math.PI/2; conch.add(sp); }
+mact(conch,'caracola',new THREE.Vector3(-2.6,sH(-2.6,8)+1.3,8));
+// almeja gigante
+const clam=new THREE.Group(); clam.position.set(-9,sH(-9,2),2); clam.rotation.y=.9; sea.add(clam); MCIRC.push({x:-9,z:2,r:.9});
+const clamTop=new THREE.Group(); clamTop.position.set(0,.18,-.55); clam.add(clamTop);
+{ const cm=M(0x9ab8d8,{r:.4,m:.2,env:1}); const bot=new THREE.Mesh(new THREE.SphereGeometry(.8,24,12,0,6.28,Math.PI/2,Math.PI/2),cm); bot.scale.y=.35; bot.position.y=.2; clam.add(bot);
+  const top=new THREE.Mesh(new THREE.SphereGeometry(.8,24,12,0,6.28,0,Math.PI/2),cm); top.scale.y=.4; top.position.z=.55; clamTop.add(top);
+  for(let k=-3;k<=3;k++){ const rib=new THREE.Mesh(new THREE.TorusGeometry(.8,.025,6,20,Math.PI),M(0xc8daf0,{r:.4})); rib.rotation.set(0,k*.25+Math.PI/2,0); rib.scale.y=.4; rib.position.z=.55; clamTop.add(rib); } }
+const pearlW=makePearl('blanca',.14); pearlW.position.set(-9,sH(-9,2)+.35,2); sea.add(pearlW);
+mact(clam,'almeja',new THREE.Vector3(-9,sH(-9,2)+1.5,2));
+// cangrejo
+const crab=new THREE.Group(); sea.add(crab);
+{ const cr=M(0xe8483a,{r:.5,e:0x5a1008,ei:.3}); const body=new THREE.Mesh(new THREE.SphereGeometry(.3,16,10),cr); body.scale.set(1.3,.55,1); body.position.y=.25; crab.add(body);
+  for(const s of [-1,1]){ for(let k=0;k<3;k++){ const l=CY(.025,.02,.35,cr,s*.35,.15,(k-1)*.14,crab,5); l.rotation.z=s*1.1; }
+    const arm=CY(.04,.04,.3,cr,s*.25,.3,.3,crab,6); arm.rotation.x=1.2; const claw=new THREE.Mesh(new THREE.SphereGeometry(.1,10,8),cr); claw.scale.set(1,.7,1.3); claw.position.set(s*.27,.38,.48); crab.add(claw);
+    const st=CY(.015,.015,.15,cr,s*.1,.45,.18,crab,4); const ey=new THREE.Mesh(new THREE.SphereGeometry(.04,8,6),M(0x111111)); ey.position.set(s*.1,.53,.18); crab.add(ey); }
+  const cp=makePearl('rosada',.1); cp.position.set(0,.5,.62); crab.add(cp); crab.userData.pearl=cp;
+  const hit=B(1.1,.8,1.1,new THREE.MeshBasicMaterial({visible:false}),0,.3,0,crab); }
+{ const r=new THREE.Mesh(new THREE.IcosahedronGeometry(1,0),M(0x6a7a82,{r:.9})); r.position.set(9,sH(9,0)+.4,0); r.scale.y=.8; sea.add(r); MCIRC.push({x:9,z:0,r:1}); }
+mact(crab,'cangrejo');
+// campo de medusas con la perla dorada
+const JF=new THREE.Vector3(-6,0,-10);
+{ const ped=new THREE.Mesh(new THREE.CylinderGeometry(.25,.4,.6,10),M(0xff6f91,{r:.6,e:0xff6f91,ei:.3})); ped.position.set(JF.x,sH(JF.x,JF.z)+.3,JF.z); sea.add(ped); }
+const pearlG=makePearl('dorada',.14); pearlG.position.set(JF.x,sH(JF.x,JF.z)+.75,JF.z); sea.add(pearlG); mact(pearlG,'perlaDorada',new THREE.Vector3(JF.x,sH(JF.x,JF.z)+1.4,JF.z));
+const jellies=[];
+for(let i=0;i<9;i++){ const g=new THREE.Group(); sea.add(g); const col=[0xff8ad8,0xb98bff,0x8ad8ff][i%3];
+  const bell=new THREE.Mesh(new THREE.SphereGeometry(.35,20,12,0,6.28,0,Math.PI/2),M(col,{r:.2,tr:true,op:.65,e:col,ei:.7,dw:false})); bell.scale.y=.8; g.add(bell);
+  for(let k=0;k<6;k++){ const a=k/6*6.28; const t=new THREE.Mesh(new THREE.CylinderGeometry(.012,.006,.9,4),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.6})); t.position.set(Math.cos(a)*.18,-.45,Math.sin(a)*.18); g.add(t); }
+  const l=i%3===0?new THREE.PointLight(col,1.2,4,2):null; if(l) g.add(l);
+  jellies.push({g,bell,a:i/9*6.28,r:1.3+(i%3)*1.1,sp:(i%2?.35:-.28)*(1+(i%3)*.2),ph:Math.random()*6}); }
+// barco hundido
+const SHIP={x1:0,x2:12,z1:-15.5,z2:-12.5}; const SDOOR=[3.4,4.6];
+const ship=new THREE.Group(); sea.add(ship);
+{ const wood=M(0x5a3e28,{r:.85}), dark=M(0x3a281a,{r:.9}); const H2=2.6;
+  const fz=SHIP.z2, bz=SHIP.z1;
+  B(SHIP.x2-SHIP.x1,.12,bz-fz,dark,6,.06,(fz+bz)/2,ship); // piso
+  B(SDOOR[0]-SHIP.x1,H2,.2,wood,(SHIP.x1+SDOOR[0])/2,H2/2,fz,ship); B(SHIP.x2-SDOOR[1],H2,.2,wood,(SDOOR[1]+SHIP.x2)/2,H2/2,fz,ship); B(SDOOR[1]-SDOOR[0],H2-2.1,.2,wood,4,2.1+(H2-2.1)/2,fz,ship);
+  B(12,H2,.2,wood,6,H2/2,bz,ship); B(.2,H2,3,wood,0,H2/2,(fz+bz)/2,ship); B(.2,H2,3,wood,12,H2/2,(fz+bz)/2,ship);
+  B(12.4,.2,3.4,wood,6,H2+.1,(fz+bz)/2,ship);
+  const hull=M(0x4a3020,{r:.9}); const h1=B(13,1.2,4,hull,6,-.2,(fz+bz)/2,ship);
+  const bow=new THREE.Mesh(new THREE.ConeGeometry(2,3,4),hull); bow.rotation.set(0,Math.PI/4,-Math.PI/2); bow.scale.set(1,1,.7); bow.position.set(13.8,.6,(fz+bz)/2); ship.add(bow);
+  const mast=CY(.15,.18,6,wood,5,H2+3,(fz+bz)/2,ship,8); mast.rotation.z=.35;
+  const sail=new THREE.Mesh(new THREE.PlaneGeometry(2.6,2.2),M(0xd8ccb0,{r:.9,side:THREE.DoubleSide,tr:true,op:.85})); sail.position.set(4.2,H2+3.4,(fz+bz)/2+.2); sail.rotation.set(.1,0,.35); ship.add(sail);
+  for(let x=.6;x<12;x+=1.2){ B(.04,.02,.04,M(0x222222),x,1.6,fz+.11,ship); }
+  const holeM=new THREE.Mesh(new THREE.CircleGeometry(.35,16),M(0x0a0a10)); holeM.position.set(8,1.5,fz+.11); ship.add(holeM);
+  const nameT=ctex(256,64,c=>{ c.fillStyle='#e8d8b0'; c.font='700 40px Caveat'; c.textAlign='center'; c.fillText('~ El Amorsh ~',128,44); });
+  const nm=new THREE.Mesh(new THREE.PlaneGeometry(1.6,.4),new THREE.MeshBasicMaterial({map:nameT,transparent:true})); nm.position.set(9.5,.2,fz-.01-.0); nm.position.z=fz+.12; ship.add(nm); }
+MRECT.push({x1:-.15,z1:SHIP.z2-.15,x2:SDOOR[0],z2:SHIP.z2+.15,on:true},{x1:SDOOR[1],z1:SHIP.z2-.15,x2:12.15,z2:SHIP.z2+.15,on:true},
+  {x1:-.15,z1:SHIP.z1-.15,x2:12.15,z2:SHIP.z1+.15,on:true},{x1:-.15,z1:SHIP.z1,x2:.15,z2:SHIP.z2,on:true},{x1:11.85,z1:SHIP.z1,x2:15.5,z2:SHIP.z2,on:true});
+const cabinLight=new THREE.PointLight(0xffb45a,2.2,6,1.8); cabinLight.position.set(6,2,-14); sea.add(cabinLight);
+{ const lm=new THREE.Mesh(new THREE.SphereGeometry(.1,10,8),new THREE.MeshBasicMaterial({color:0xffd08a})); lm.position.set(6,2.2,-14); sea.add(lm); }
+// barriles (azul) afuera
+const barrels=[];
+for(const [x,z,k] of [[13.2,-10.6,'azul'],[14.2,-9.6,null],[12.4,-9.3,null]]){ const g=new THREE.Group(); g.position.set(x,sH(x,z),z); sea.add(g);
+  const bm=M(0x7a5434,{r:.8}); const b=CY(.35,.35,.85,bm,0,.43,0,g,14); for(const y of [.15,.71]){ const ring=new THREE.Mesh(new THREE.TorusGeometry(.355,.025,6,20),M(0x444444,{m:.7,r:.4})); ring.rotation.x=Math.PI/2; ring.position.y=y; g.add(ring); }
+  MCIRC.push({x,z,r:.45}); barrels.push({g,k}); if(k) mact(g,'barril',new THREE.Vector3(x,sH(x,z)+1.3,z)); }
+const pearlB=makePearl('azul',.12); pearlB.visible=false; sea.add(pearlB);
+// perla negra (dentro del barco)
+const pearlN=makePearl('negra',.13); pearlN.position.set(10.6,.35,-15); sea.add(pearlN); mact(pearlN,'perlaNegra',new THREE.Vector3(10.6,1,-15));
+{ const sl=new THREE.PointLight(0x9a7aff,1,2.5,2); sl.position.set(10.6,.6,-15); sea.add(sl); }
+// cofre del capitán (dentro del barco)
+const seaChest=new THREE.Group(); seaChest.position.set(1.2,.12,-14.3); seaChest.rotation.y=Math.PI/2; sea.add(seaChest);
+const seaLid=new THREE.Group();
+{ const cm=M(0x6b3e1e,{r:.6}), gm=M(0xd9a53a,{m:.85,r:.3,env:1}); B(.9,.5,.55,cm,0,.25,0,seaChest); B(.92,.05,.57,gm,0,.42,0,seaChest);
+  seaLid.position.set(0,.5,-.275); seaChest.add(seaLid); B(.9,.16,.55,cm,0,.08,.275,seaLid); B(.92,.04,.57,gm,0,.14,.275,seaLid);
+  for(let i=0;i<5;i++){ const h=new THREE.Mesh(new THREE.CircleGeometry(.045,12),M(0x1a1008)); h.position.set(-.3+i*.15,.3,.28); seaChest.add(h); } }
+mact(seaChest,'cofreMar',new THREE.Vector3(1.2,1.1,-14.3)); MCIRC.push({x:1.2,z:-14.3,r:.45});
+// la voz de J: una caracola de luz
+const voice=new THREE.Group(); voice.position.set(1.2,1.3,-14.3); voice.visible=false; sea.add(voice);
+const voiceRings=[];
+{ const sh=new THREE.Mesh(new THREE.TorusKnotGeometry(.13,.05,64,8,2,3),M(0xffd8f0,{r:.25,e:0xff7ec8,ei:.8,env:1.5})); voice.add(sh); voice.userData.shell=sh;
+  for(let i=0;i<3;i++){ const r=new THREE.Mesh(new THREE.TorusGeometry(.3,.012,6,40),new THREE.MeshBasicMaterial({color:0xffc8ec,transparent:true,depthWrite:false})); voice.add(r); voiceRings.push(r); }
+  const gl=new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex,color:0xffc8ec,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false})); gl.scale.setScalar(1.2); voice.add(gl); }
+mact(voice,'voz',new THREE.Vector3(1.2,2,-14.3));
+// portales
+const backPortalM=makePortal(sea,0x3aa8ff); backPortalM.scale.set(.6,.85,1); backPortalM.position.set(0,sH(0,15)+1.05,15); mact(backPortalM,'volverBosque');
+const candyPortal=makePortal(sea,0xff7ec8); candyPortal.scale.set(.8,1.1,1); candyPortal.position.set(4,sH(4,-9.5)+1.3,-9.4); candyPortal.visible=false; mact(candyPortal,'portal4',new THREE.Vector3(4,sH(4,-9.5)+2.6,-9.4));
+
+// ---------- jugador bajo el mar ----------
+let stung=0;
+function placeSeaStart(restore){
+  if(restore&&S.mp){ MP.x=S.mp[0]; MP.z=S.mp[1]; yaw=S.mp[2]; } else { MP.x=0; MP.z=12.5; yaw=0; pitch=0; }
+  camera.position.set(MP.x,sH(MP.x,MP.z)+1.6,MP.z); camera.rotation.set(pitch,yaw,0);
+}
+function seaCollide(p){ const R=.3;
+  for(const c of MCIRC){ const dx=p.x-c.x, dz=p.z-c.z, d=Math.hypot(dx,dz), m=c.r+R; if(d<m&&d>1e-6){ p.x=c.x+dx/d*m; p.z=c.z+dz/d*m; } }
+  for(const r of MRECT){ if(!r.on) continue; const qx=Math.max(r.x1,Math.min(p.x,r.x2)), qz=Math.max(r.z1,Math.min(p.z,r.z2)); const dx=p.x-qx, dz=p.z-qz, d2=dx*dx+dz*dz;
+    if(d2<R*R){ if(d2>1e-9){ const d=Math.sqrt(d2); p.x=qx+dx/d*R; p.z=qz+dz/d*R; } else { const o=[[p.x-r.x1,-1,0],[r.x2-p.x,1,0],[p.z-r.z1,0,-1],[r.z2-p.z,0,1]].sort((a,b)=>a[0]-b[0])[0]; if(o[1]) p.x=o[1]<0?r.x1-R:r.x2+R; else p.z=o[2]<0?r.z1-R:r.z2+R; } } }
+  const dx=p.x, dz=p.z+4, d=Math.hypot(dx,dz); if(d>21){ p.x=dx/d*21; p.z=-4+dz/d*21; } }
+function inShip(x,z){ return x>SHIP.x1&&x<SHIP.x2&&z>SHIP.z1&&z<SHIP.z2; }
+function seaStep(dt,mx,my,l,T){
+  if(l>.05){ const s=2.3*dt, fx=-Math.sin(yaw), fz=-Math.cos(yaw), rx=Math.cos(yaw), rz=-Math.sin(yaw); const p={x:MP.x+(fx*my+rx*mx)*s, z:MP.z+(fz*my+rz*mx)*s}; seaCollide(p); MP.x=p.x; MP.z=p.z; bob+=dt*5*l; }
+  for(const j of jellies){ const dx=MP.x-j.g.position.x, dz=MP.z-j.g.position.z, d=Math.hypot(dx,dz); if(d<.75&&T-stung>1){ stung=T; sfx('bad'); const k=1.6/(d||1); const p={x:MP.x+dx*k, z:MP.z+dz*k}; seaCollide(p); MP.x=p.x; MP.z=p.z; toast('¡Auch! 🪼 Una medusa te picó. Esquívalas…'); $('#fade').style.background='#ff4fa0'; $('#fade').classList.add('on'); setTimeout(()=>{ $('#fade').classList.remove('on'); setTimeout(()=>$('#fade').style.background='#000',400); },120); } }
+  const gy=inShip(MP.x,MP.z)?.12:sH(MP.x,MP.z);
+  camera.position.set(MP.x,gy+1.6+Math.sin(T*1.3)*.06+Math.sin(bob)*.02,MP.z); camera.rotation.set(pitch,yaw,Math.sin(T*.9)*.012);
+  if(candyPortal.visible&&Math.hypot(MP.x-candyPortal.position.x,MP.z-candyPortal.position.z)<.8) doAct('portal4');
+  if(Math.hypot(MP.x-backPortalM.position.x,MP.z-backPortalM.position.z)<.55) doAct('volverBosque');
+}
+let crabA=0, crabCaught=false;
+function updateSea(dt,T){
+  causU.t.value=T; surfU.t.value=T*.6; backPortalM.userData.u.t.value=T; candyPortal.userData.u.t.value=T;
+  rays.forEach(r=>{ r.m.material.opacity=.3+Math.sin(T*.7+r.ph)*.2; r.m.rotation.z=.25+Math.sin(T*.3+r.ph)*.05; });
+  kelps.forEach(k=>{ k.g.rotation.z=Math.sin(T*.8+k.ph)*.12; k.g.rotation.x=Math.cos(T*.6+k.ph)*.08; });
+  { const m=new THREE.Matrix4(), q=new THREE.Quaternion(), sc=new THREE.Vector3(1,1,1), e=new THREE.Euler();
+    for(const f of fishGroups){ for(let i=0;i<f.n;i++){ const o=f.off[i]; const a=T*f.sp+o[0]; const x=f.cx+Math.cos(a)*(f.r+o[1]), z=f.cz+Math.sin(a)*(f.r+o[1]), y=f.y+o[2]+Math.sin(T*2+o[3])*.2;
+      e.set(0,-a+(f.sp>0?-Math.PI/2:Math.PI/2)+Math.sin(T*8+o[3])*.15,0); q.setFromEuler(e); m.compose(new THREE.Vector3(x,y,z),q,sc); f.im.setMatrixAt(i,m); f.it.setMatrixAt(i,m); }
+      f.im.instanceMatrix.needsUpdate=true; f.it.instanceMatrix.needsUpdate=true; } }
+  if((bubbleT.t+=dt)>.08){ bubbleT.t=0; const x=(Math.random()-.5)*30, z=-4+(Math.random()-.5)*30; emit(new THREE.Vector3(x,sH(x,z)+.2,z),{color:0xdff6ff,vel:[0,1.2,0],spread:.15,life:4,size:.06,op:.7}); }
+  if(Math.random()<.06) emit(new THREE.Vector3(pulpi.position.x,pulpi.position.y+1,pulpi.position.z),{color:0xdff6ff,vel:[0,.9,0],spread:.1,life:2.5,size:.05,op:.7});
+  pulpi.position.y=sH(2.4,8)+.9+Math.sin(T*1.4)*.12; { const dx=camera.position.x-pulpi.position.x, dz=camera.position.z-pulpi.position.z; pulpi.rotation.y=Math.atan2(dx,dz); }
+  tentacles.forEach(t=>t.segs.forEach((s,k)=>{ s.rotation.z=-.35+Math.sin(T*2.2+t.ph+k*.7)*.25; }));
+  // almeja: abierta 1.4 s, cerrada 2.2 s
+  const cyc=(T%3.8); const open=cyc<1.8; clam.userData.open=open;
+  const target=open?-.75:0; clamTop.rotation.x+=(target-clamTop.rotation.x)*Math.min(1,dt*8);
+  if(!S.f.p_blanca){ pearlW.visible=true; pearlW.material.emissiveIntensity=open?.8:.2; }
+  // cangrejo
+  if(!crabCaught){ crabA+=dt*(.9+.5*Math.sin(T*.7)); const r=2.4; crab.position.set(9+Math.cos(crabA)*r,sH(9,0),Math.sin(crabA)*r); crab.rotation.y=-crabA; crab.position.y+=Math.abs(Math.sin(T*14))*.04; }
+  jellies.forEach(j=>{ const a=j.a+T*j.sp; j.g.position.set(JF.x+Math.cos(a)*j.r,sH(JF.x,JF.z)+1.1+Math.sin(T*1.5+j.ph)*.4,JF.z+Math.sin(a)*j.r); const pulse=1+Math.sin(T*3+j.ph)*.12; j.bell.scale.set(pulse,.8/pulse,pulse); });
+  if(pearlG.visible) pearlG.rotation.y=T; if(pearlN.visible) pearlN.position.y=.35+Math.sin(T*2)*.05;
+  if(voice.visible&&!busy){ voice.userData.shell.rotation.y=T*.8; voice.position.y=1.3+Math.sin(T*1.5)*.08; voiceRings.forEach((r,i)=>{ const k=((T*.6+i/3)%1); r.scale.setScalar(.5+k*2.2); r.material.opacity=(1-k)*.7; r.lookAt(camera.position); }); }
+  if(candyPortal.visible&&Math.random()<.4) emit(candyPortal.position.clone().add(new THREE.Vector3((Math.random()-.5)*1.4,(Math.random()-.5)*2,.1)),{color:0xffa8dc,vel:[0,.4,.3],spread:.3,life:1.2,size:.05});
+}
+function goMar(){ switchWorld('mar',()=>placeSeaStart(false),()=>{ if(!S.f.llegoMar){ S.f.llegoMar=1; save();
+  say('🌊 ¡Llegaste Bajo el Mar!','Aquí abajo todo es azul y tranquilo… El mar me recuerda <b>nuestra primera salida a la playa</b> 🏖️.<br><br>Mi <b>voz</b> 🗣️ quedó guardada en el cofre de un barco hundido. Habla con el pulpo, creo que sabe algo… 🐙'); } }); }
+function seaHint(){
+  if(!S.f.pulpi) return 'Habla con el pulpo morado que está cerca de donde llegaste 🐙.';
+  const have=PEARL_ORDER.filter(k=>S.f['p_'+k]).length;
+  if(have<5){ const miss=[]; if(!S.f.p_blanca) miss.push('⚪ la almeja gigante (tócala cuando esté ABIERTA)'); if(!S.f.p_rosada) miss.push('🌸 el cangrejo que corre alrededor de una roca'); if(!S.f.p_dorada) miss.push('🟡 el centro del campo de medusas (esquívalas)'); if(!S.f.p_azul) miss.push('🔵 los barriles junto al barco'); if(!S.f.p_negra) miss.push('⚫ el fondo de la cabina del barco');
+    return `Te faltan ${5-have} perlas: `+miss.join(' · '); }
+  if(!S.f.caracola) return 'Ponte la caracola rosada al oído (está sobre una roca, cerca de donde llegaste). Te dice el orden de las perlas.';
+  if(!S.f.cofreMar) return 'Orden del cofre: blanca (espuma), rosada (mejillas), dorada (sol), azul (mar), negra (noche).';
+  if(!S.f.voz) return 'Toca la caracola de luz que salió del cofre.';
+  return 'Sal del barco: se abrió un portal rosado afuera, frente a la puerta.';
+}
+function takePearl(k,obj){ if(S.f['p_'+k]) return; S.f['p_'+k]=1; save(); flyToCam(obj,()=>give('perla_'+k)); }
+// cofre con las 5 perlas
+function openSeaChestUI(){
+  let placed=[];
+  const draw=b=>{ b.querySelector('#slots').innerHTML=PEARL_ORDER.map((_,i)=>{ const k=placed[i]; return `<div style="width:46px;height:46px;border-radius:50%;border:3px dashed #d9a53a;display:flex;align-items:center;justify-content:center;background:#1a1008">${k?`<span style="width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,${hex(PEARLS[k].c)} 55%);display:block;box-shadow:0 0 10px ${hex(PEARLS[k].c)}"></span>`:''}</div>`; }).join('');
+    const mine=PEARL_ORDER.filter(k=>has('perla_'+k)&&!placed.includes(k));
+    b.querySelector('#mine').innerHTML=mine.length?mine.map(k=>`<button data-p="${k}" style="width:52px;height:52px;border-radius:50%;border:2px solid #fff6;background:radial-gradient(circle at 35% 30%,#fff,${hex(PEARLS[k].c)} 55%);cursor:pointer;margin:4px"></button>`).join(''):'<p style="color:#b9a8d6">'+(placed.length?'':'No tienes perlas todavía…')+'</p>';
+    b.querySelectorAll('[data-p]').forEach(x=>x.onclick=()=>{ sfx('click'); placed.push(x.dataset.p); draw(b);
+      if(placed.length===5){ if(placed.join()===PEARL_ORDER.join()){ setTimeout(()=>{ closeModal(); openSeaChest(true); },500); }
+        else { sfx('bad'); b.querySelector('#chMsg').textContent='💦 Las perlas se salieron… ese no es el orden.'; setTimeout(()=>{ placed=[]; draw(b); },700); } }
+      else if(placed.length===PEARL_ORDER.filter(k=>has('perla_'+k)).length&&placed.length<5){ b.querySelector('#chMsg').textContent=`Faltan ${5-placed.length} perla(s)…`; } }); };
+  const n=PEARL_ORDER.filter(k=>has('perla_'+k)).length;
+  modal(`<h2>🧰 El cofre del capitán</h2><p>Tiene <b>5 huecos redondos</b> en fila. ${n<5?`Tienes ${n} de 5 perlas.`:'¿En qué orden van?'}</p><div id="slots" style="display:flex;gap:8px;justify-content:center;margin:12px 0"></div>
+    <div id="mine" style="min-height:60px"></div><p id="chMsg" style="min-height:22px;color:#ffb3b3"></p><button class="btn sec" id="chOut">Sacar perlas</button><button class="btn sec" onclick="closeModal()">Cerrar</button>`,b=>{ draw(b); b.querySelector('#chOut').onclick=()=>{ placed=[]; draw(b); b.querySelector('#chMsg').textContent=''; }; });
+}
+function openSeaChest(animate){ if(animate){ S.f.cofreMar=1; PEARL_ORDER.forEach(k=>take('perla_'+k)); save(); sfx('creak'); anim(1,t=>seaLid.rotation.x=-1.9*ease(t),()=>{ showVoice(true); }); } else { seaLid.rotation.x=-1.9; } }
+function showVoice(animate){ voice.visible=true; if(!animate) return; voice.scale.setScalar(.01); sfx('magic'); anim(1.2,t=>voice.scale.setScalar(Math.max(.01,ease(t))));
+  for(let i=0;i<40;i++) emit(new THREE.Vector3(1.2,1,-14.3),{color:i%2?0xffc8ec:0xffffff,vel:[0,1,0],spread:1.5,life:1.4,size:.06});
+  toast('Del cofre salió una caracola de luz… se escucha algo 🎶',3500); }
+let vozAudio=null;
+function collectVoice(){
+  const first=!S.f.voz; if(first){ S.f.voz=1; if(!S.parts.includes('voz')) S.parts.push('voz'); save(); }
+  const show=()=>{ sfx('ok'); updHud();
+    modal(`<div style="font-size:54px">🗣️</div><h2>¡Encontraste mi voz!</h2>
+      <button class="btn" id="playV" style="font-size:18px">▶ Escuchar mi voz</button>
+      <div class="letter" id="vozTxt" style="text-align:center;font-size:24px;margin-top:10px">"Amorsh… si estás escuchando esto, es porque ya encontraste mi voz. Estoy muy orgulloso de ti, sabía que ibas a llegar hasta aquí. Gracias por hacer mis días más bonitos desde que llegaste. Te quiero mucho. Ya te falta poquito para armarme completo… sigue, que al final te espera algo."<br>— ${P.yo} ❤️</div>
+      <p>🧩 Partes de J: <b>${S.parts.length}/7</b></p><button class="btn sec" id="okVoz">Seguir</button>`,b=>{
+      b.querySelector('#playV').onclick=()=>{ try{ if(vozAudio){ vozAudio.pause(); } vozAudio=new Audio(VOZ_URL); vozAudio.play().then(()=>{ b.querySelector('#playV').textContent='🔊 Sonando…'; vozAudio.onended=()=>{ const e=b.querySelector('#playV'); if(e) e.textContent='▶ Escuchar otra vez'; }; }).catch(()=>{ b.querySelector('#playV').textContent='🎙️ (Aquí va a sonar la voz de J)'; }); }catch(e){} };
+      b.querySelector('#okVoz').onclick=()=>{ if(vozAudio) vozAudio.pause(); closeModal(); if(!candyPortal.visible){ candyPortal.visible=true; candyPortal.scale.set(.01,.01,1); anim(1.2,t=>candyPortal.scale.set(Math.max(.01,.8*ease(t)),Math.max(.01,1.1*ease(t)),1)); toast('Afuera del barco se abrió un portal rosado 🍭',3500); } }; });
+  };
+  if(first) flyToCam(voice,show); else show();
+}
+Object.assign(ACT,{
+  pulpi(){ S.f.pulpi=1; save(); sfx('tap');
+    say('🐙 Pulpi',`¡Jijiji! Hola, ${P.ella}… Sí, fui yo 🙈. Me robé las <b>5 perlas</b> del cofre del barco hundido y las escondí por todo el mar.<br><br>⚪ Una se la di a la <b>almeja gigante</b> (solo se abre a ratos).<br>🌸 Otra la tiene un <b>cangrejo</b> que no para de correr.<br>🟡 Otra está entre las <b>medusas</b>… ¡pican!<br>🔵 Otra la metí en un <b>barril</b> junto al barco.<br>⚫ Y la última quedó en el fondo de la <b>cabina</b>.<br><br>El orden para el cofre… pregúntaselo a la <b>caracola</b>. 🐚`); },
+  caracola(){ S.f.caracola=1; save(); [880,660,990,740].forEach((f,i)=>setTimeout(()=>note(f,.9,.05),i*260));
+    modal(`<h2>🐚 La caracola</h2><p style="color:#b9a8d6">Te acercas la caracola al oído… y se escucha un susurro:</p>
+      <div class="letter" style="font-size:24px;text-align:center">"Pon las perlas en el cofre así…<br><br>⚪ <b>blanca</b> como la espuma de la playa,<br>🌸 <b>rosada</b> como tus mejillas cuando te digo Amorsh,<br>🟡 <b>dorada</b> como el sol de nuestra primera salida,<br>🔵 <b>azul</b> como el mar de ese día,<br>⚫ y <b>negra</b> como la noche en que te extraño."</div><button class="btn" onclick="closeModal()">OK</button>`); },
+  almeja(){ if(S.f.p_blanca) return toast('La almeja ya no tiene nada.'); if(clam.userData.open){ sfx('item'); takePearl('blanca',pearlW); } else { sfx('bad'); toast('¡Clac! 🦪 Se cerró. Espera a que se abra…'); } },
+  cangrejo(){ if(S.f.p_rosada) return; crabCaught=true; sfx('item'); toast('¡Atrapaste al cangrejo! 🦀 Soltó la perla.'); const cp=crab.userData.pearl; takePearl('rosada',cp); setTimeout(()=>{ crabCaught=false; },2500); },
+  perlaDorada(){ takePearl('dorada',pearlG); },
+  barril(){ if(S.f.p_azul) return toast('El barril está vacío.'); const g=barrels[0].g; sfx('creak'); anim(.5,t=>g.rotation.z=Math.sin(t*Math.PI*4)*.2*(1-t),()=>{ pearlB.position.copy(g.position).add(new THREE.Vector3(0,.95,0)); pearlB.visible=true; takePearl('azul',pearlB); }); },
+  perlaNegra(){ takePearl('negra',pearlN); },
+  cofreMar(){ if(S.f.cofreMar) return; openSeaChestUI(); },
+  voz(){ if(!S.f.cofreMar||!voice.visible&&!S.f.voz) return; collectVoice(); },
+  volverBosque(){ if(switching) return; switchWorld('bosque',()=>{ FP.x=0; FP.z=-23.4; yaw=Math.PI; pitch=-.05; camera.position.set(FP.x,walkH(FP.x,FP.z)+1.6,FP.z); }); },
+  portal4(){ if(switching||$('#fin').style.display==='flex') return; sfx('magic');
+    showFin(`<div style="font-size:64px">🍭</div><h2 style="margin:8px 0">¡Mundo 3 completo, ${P.apodo}!</h2>
+      <p style="color:#d9c8ff">🧩 Partes de J: <b>${S.parts.length}/7</b> · ⏱ <b>${fmt(S.t)}</b> · 💡 <b>${S.hints}</b></p>
+      <p style="color:#d9c8ff;max-width:320px">El portal rosado te lleva al <b>🍭 Mundo de Dulces</b>, donde está escondida mi sonrisa 😄.</p>
+      <p style="color:#9a88b8;font-size:14px">(Este mundo todavía se está construyendo ✨)</p><button class="btn sec" id="backM">Volver al mar</button>`);
+    $('#backM').onclick=()=>{ $('#fin').style.display='none'; MP.x=4; MP.z=-8; yaw=0; }; },
+});
+function applySeaState(){ const f=S.f;
+  if(f.p_blanca) pearlW.visible=false; if(f.p_rosada) crab.userData.pearl.visible=false; if(f.p_dorada) pearlG.visible=false; if(f.p_negra) pearlN.visible=false;
+  if(f.cofreMar){ openSeaChest(false); if(!f.voz) showVoice(false); } if(f.voz){ voice.visible=false; candyPortal.visible=true; } }
+applySeaState();
+Object.assign(window.G,{goMar:()=>goMar(), get MP(){return MP}, mtp:(x,z,y)=>{MP.x=x;MP.z=z;if(y!==undefined)yaw=y;}, mstep:(n,mx,my)=>{ for(let i=0;i<n;i++) seaStep(1/60,mx,my,1,performance.now()/1000); }, clamOpen:()=>!!clam.userData.open, pearlBtn:k=>{ const e=document.querySelector(`[data-p="${k}"]`); e&&e.click(); }});
 
 // ================== ESTADO INICIAL ==================
 function applyState(){
@@ -1265,11 +1536,14 @@ function loop(){
   const dt=Math.min(.05,clock.getDelta()), T=clock.elapsedTime;
   for(let i=ANIMS.length-1;i>=0;i--){ const a=ANIMS[i]; a.t+=dt; const k=Math.min(1,a.t/a.dur); a.fn(k); if(k>=1){ ANIMS.splice(i,1); a.done&&a.done(); } }
   // movimiento
-  if(WORLD==='espacio') updateSpace(dt,T); if(WORLD==='bosque') updateForest(dt,T);
+  if(WORLD==='espacio') updateSpace(dt,T); if(WORLD==='bosque') updateForest(dt,T); if(WORLD==='mar') updateSea(dt,T);
   const canMove=!focus&&!busy&&!modalOpen()&&S.started&&$('#fin').style.display!=='flex'&&$('#tele').style.display!=='flex'&&!switching;
   if(WORLD==='espacio'){ let mx=move.x, my=move.y;
     if(keys.w||keys.arrowup) my=1; if(keys.s||keys.arrowdown) my=-1; if(keys.a||keys.arrowleft) mx=-1; if(keys.d||keys.arrowright) mx=1;
     if(!canMove){ mx=my=0; jumpReq=false; } spaceStep(dt,mx,my,Math.min(1,Math.hypot(mx,my)));
+  } else if(WORLD==='mar'){ let mx=move.x, my=move.y;
+    if(keys.w||keys.arrowup) my=1; if(keys.s||keys.arrowdown) my=-1; if(keys.a||keys.arrowleft) mx=-1; if(keys.d||keys.arrowright) mx=1;
+    if(!canMove) mx=my=0; seaStep(dt,mx,my,Math.min(1,Math.hypot(mx,my)),T);
   } else if(WORLD==='bosque'){ if(canMove){ let mx=move.x, my=move.y;
     if(keys.w||keys.arrowup) my=1; if(keys.s||keys.arrowdown) my=-1; if(keys.a||keys.arrowleft) mx=-1; if(keys.d||keys.arrowright) mx=1;
     forestStep(dt,mx,my,Math.min(1,Math.hypot(mx,my))); }
@@ -1301,7 +1575,7 @@ function loop(){
   renderer.render(activeScene(),camera);
 }
 camera.position.set(player.x,1.6,player.z); camera.rotation.set(pitch,yaw,0);
-if(WORLD==='espacio') placeSpaceStart(true); if(WORLD==='bosque') placeForestStart(true);
+if(WORLD==='espacio') placeSpaceStart(true); if(WORLD==='bosque') placeForestStart(true); if(WORLD==='mar') placeSeaStart(true);
 renderInv(); updHud(); loop();
 
 // ================== INTRO ==================
