@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Los Pedazos de J · Tráiler</title>
+<meta property="og:title" content="Los Pedazos de J 💗">
+<meta property="og:description" content="Un juego hecho solo para ti, Amorsh. Mira el tráiler 🎬">
+<meta property="og:image" content="https://jdrt2005t.github.io/pedazos-de-j/trailer/portada.jpg">
+<meta property="og:type" content="video.other">
+<meta name="theme-color" content="#140d22">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Caveat:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#07030e;--pink:#ff7eb6;--text:#f3e6ff}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:Fredoka,system-ui,sans-serif}
+  body{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px 28px;
+    background:radial-gradient(circle at 50% 30%,#3a1f66 0%,#140d22 55%,#07030e 100%)}
+  h1{margin:0 0 4px;font-size:clamp(30px,8vw,44px);text-align:center;text-shadow:0 0 22px #ff4fa0}
+  .sub{font-family:Caveat,cursive;font-size:clamp(22px,6vw,28px);color:#ffd6f0;margin:0 0 16px;text-align:center}
+  .wrap{position:relative;width:100%;max-width:400px;aspect-ratio:9/16;border-radius:22px;overflow:hidden;box-shadow:0 0 0 2px #ff7eb655,0 0 40px #ff4fa055;background:#000}
+  video{width:100%;height:100%;display:block;object-fit:cover}
+  .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(7,3,14,.25);border:0;cursor:pointer;color:#fff}
+  .play span{width:86px;height:86px;border-radius:50%;background:var(--pink);display:flex;align-items:center;justify-content:center;font-size:38px;padding-left:6px;box-shadow:0 0 30px #ff4fa0}
+  .soon{margin-top:16px;font-weight:700;letter-spacing:2px;color:#ffd23b;text-shadow:0 0 14px #ff8a2b}
+</style>
+</head>
+<body>
+  <h1>Los Pedazos de J</h1>
+  <p class="sub">Un juego hecho solo para ti, Amorsh 💗</p>
+  <div class="wrap">
+    <video id="v" src="trailer.mp4" poster="portada.jpg" playsinline preload="metadata"></video>
+    <button class="play" id="p" aria-label="Ver tráiler"><span>▶</span></button>
+  </div>
+  <div class="soon">MUY PRONTO…</div>
+<script>
+  const v=document.getElementById('v'), p=document.getElementById('p');
+  p.onclick=()=>{ p.style.display='none'; v.controls=true; v.play(); };
+  v.onended=()=>{ v.controls=false; p.style.display='flex'; p.querySelector('span').textContent='↻'; };
+</script>
+</body>
+</html>
