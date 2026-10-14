@@ -10,6 +10,9 @@
 <style>
 :root{--bg:#140d22;--panel:#231838;--ink:#f6efff;--muted:#b9a8d6;--acc:#ff5c9a;--gold:#ffd166;--ok:#5be3a0;}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;touch-action:none}
+.box,.box *,#fin,#fin *,#tele,#tele *{touch-action:pan-y}
+.box{overscroll-behavior:contain}
+#fin{overflow-y:auto;-webkit-overflow-scrolling:touch}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Fredoka,system-ui,sans-serif;overflow:hidden}
 #app{position:fixed;inset:0;display:flex;flex-direction:column}
 header{position:absolute;top:0;left:0;right:0;z-index:6;display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;background:linear-gradient(#0b0714dd,#0b071400);pointer-events:none}
