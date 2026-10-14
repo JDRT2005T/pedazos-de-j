@@ -2484,7 +2484,7 @@ function applyLibState(){ const f=S.f; TOMOS.forEach(t=>{ if(f['t_'+t.k]) tomoOb
 applyLibState();
 
 // ================== MUNDO 8: LA PUERTA FINAL ==================
-const REGALO={titulo:'🎁 ¡Te ganaste un regalo!', texto:'Toma una captura de esta pantalla y mándasela a J para reclamarlo 😏'};
+const REGALO={titulo:'🎁 ¡Te ganaste una pichera! 😏🔥', texto:'Toma una captura de esta pantalla y mándasela a J para reclamarla 😏'};
 const sky8=new THREE.Scene(); sky8.fog=new THREE.Fog(0xffc8d8,30,120);
 const FW8=gworld('final',{scene:sky8,title:'🚪 La Puerta Final',jump:false,start:[0,10,0],speed:2.4,
   bound:p=>{ if(p.x>60){ const dx=p.x-100, d=Math.hypot(dx,p.z); if(d>5.4){ p.x=100+dx/d*5.4; p.z*=5.4/d; } return; } const d=Math.hypot(p.x,p.z); if(d>12.6){ p.x*=12.6/d; p.z*=12.6/d; } }});
@@ -2592,7 +2592,7 @@ function assembleJ(){ S.f.armado=1; save(); busy=true; silh.visible=false; jFig.
   setTimeout(()=>{ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>note(f,1.2,.09),i*120)); celebrate=6; busy=false; setTimeout(()=>showEnding(),2600); },900+order.length*550+300); }
 let celebrate=0;
 function showEnding(){ if(!S.f.gano){ S.f.gano=1; S.f.tiempoFinal=S.t; save(); }
-  const t=fmt(S.f.tiempoFinal||S.t); const msg=encodeURIComponent(`¡Amorsh, terminé Los Pedazos de J! 🧩💗 Te armé completo en ⏱ ${t}. Ahora quiero mi regalo 🎁😏`);
+  const t=fmt(S.f.tiempoFinal||S.t); const msg=encodeURIComponent(`¡Amorsh, terminé Los Pedazos de J! 🧩💗 Te armé completo en ⏱ ${t}. Ahora quiero mi pichera 😏🔥`);
   modal(`<div style="font-size:50px">💗</div><h2>¡Me armaste completo, ${P.apodo}!</h2>
     <div class="letter" style="font-size:21px;line-height:1.25">Amorsh… lo lograste. Me armaste pedazo por pedazo 🧩.<br><br>Pero la verdad es que yo ya estaba completo desde el <b>1 de agosto</b>, el día que llegaste.<br><br>Gracias por reírte de mis bobadas, por tenerme paciencia y por quererme así.<br>Cada mundo de este juego tiene un pedacito de lo que siento por ti.<br><br>Te quiero muchísimo.<br>— ${P.yo} ❤️</div>
     <p style="color:#d9c8ff">⏱ ${t} · 💡 pistas que te sobraron: ${S.hints}</p><button class="btn" id="toGift">Seguir 🎁</button>`,b=>{
