@@ -104,15 +104,36 @@
   .polaroid .pie { display:flex; align-items:center; gap:8px; margin-top:9px; }
   .polaroid .quien { flex:1; min-width:0; font-size:13px; color:var(--suave); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .polaroid .quien b { color:var(--texto); }
-  .btnFoto { border:none; border-radius:999px; padding:9px 14px; background:var(--rosa); color:#fff; font:800 14px Nunito,sans-serif; cursor:pointer; flex:none; }
+  .btnFoto { border:none; border-radius:999px; padding:9px 12px; background:var(--rosa); color:#fff; font:800 14px Nunito,sans-serif; cursor:pointer; flex:none; }
   .nueva { position:absolute; top:8px; left:8px; background:var(--rosa); color:#fff; font-weight:900; font-size:12px; border-radius:999px; padding:3px 9px; animation:latir 1.6s infinite; }
-  .pantallaFoto { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:40; display:none; flex-direction:column; align-items:center; justify-content:center; padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px); }
+  .pantallaFoto { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:45; display:none; flex-direction:column; align-items:center; justify-content:center; padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px); }
   .pantallaFoto.ver { display:flex; }
   .pantallaFoto img { max-width:100%; max-height:70vh; border-radius:16px; }
   .pantallaFoto .leyenda { color:#fff; font-weight:800; margin-top:12px; text-align:center; font-size:17px; }
   .pantallaFoto input { width:100%; max-width:420px; margin-top:12px; padding:13px 14px; border-radius:16px; border:none; font:700 16px Nunito,sans-serif; -webkit-user-select:text; user-select:text; }
   .pantallaFoto .fila { display:flex; gap:10px; width:100%; max-width:420px; margin-top:12px; }
   .pantallaFoto .fila .btn { flex:1; }
+
+  /* álbum */
+  .btnAlbum { border:2px solid var(--rosa2); border-radius:999px; padding:7px 11px; background:transparent; color:var(--texto); font:800 14px Nunito,sans-serif; cursor:pointer; flex:none; }
+  .album { position:fixed; inset:0; z-index:35; background:var(--fondo); display:none; flex-direction:column; }
+  .album.ver { display:flex; }
+  .album .cab { display:flex; align-items:center; justify-content:space-between; padding:calc(env(safe-area-inset-top) + 12px) 16px 10px; }
+  .album .cab h2 { margin:0; font-size:22px; font-weight:900; }
+  .album .cab button { border:none; background:var(--tarjeta); color:var(--texto); border-radius:999px; padding:8px 14px; font:800 15px Nunito,sans-serif; cursor:pointer; }
+  .album .cuerpo { flex:1; overflow-y:auto; padding:0 12px calc(env(safe-area-inset-bottom) + 20px); -webkit-overflow-scrolling:touch; }
+  .album .dia { font-weight:900; color:var(--suave); font-size:14px; margin:14px 4px 8px; }
+  .album .dia::first-letter { text-transform:uppercase; }
+  .album .rejilla { display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; }
+  .album .mini { position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; background:var(--tarjeta); cursor:pointer; }
+  .album .mini img { width:100%; height:100%; object-fit:cover; display:block; }
+  .album .mini .de { position:absolute; bottom:5px; right:5px; width:22px; height:22px; border-radius:50%; color:#fff; font-size:11px; font-weight:900; display:grid; place-items:center; border:2px solid #fff; }
+  .album .vacio { text-align:center; color:var(--suave); font-weight:800; margin-top:30vh; line-height:1.6; }
+  .album .mas { display:block; margin:16px auto 0; max-width:240px; }
+  .navFoto { display:flex; gap:10px; width:100%; max-width:420px; margin-top:14px; }
+  .navFoto button { flex:1; border:none; border-radius:16px; padding:13px; font:800 16px Nunito,sans-serif; background:rgba(255,255,255,.14); color:#fff; cursor:pointer; }
+  .navFoto button:disabled { opacity:.3; }
+  .navFoto .cerrar { flex:1.4; background:#fff; color:#1b1418; }
 
   /* notificación dentro de la app */
   .noti { position:fixed; top:-110px; left:12px; right:12px; max-width:420px; margin:0 auto; z-index:20; background:rgba(245,240,243,.9); color:#1b1418;
@@ -179,7 +200,7 @@
     <div class="dias"><b id="nDias">0</b> días juntos 💗</div>
     <div class="polaroid">
       <div class="marco" id="marcoFoto"><div class="vacia" id="fotoVacia"><span>📷</span>Aquí sale la última foto que te mande</div></div>
-      <div class="pie"><div class="quien" id="fotoQuien">Foto del momento</div><button class="btnFoto" id="btnFoto">📸 Enviar foto</button></div>
+      <div class="pie"><div class="quien" id="fotoQuien">Foto del momento</div><button class="btnAlbum" id="btnAlbum">📚 Álbum</button><button class="btnFoto" id="btnFoto">📸 Enviar foto</button></div>
       <input type="file" id="archivo" accept="image/*" hidden>
     </div>
     <div class="avisoNoti" id="avisoNoti" hidden>
@@ -208,7 +229,11 @@
 <div class="pantallaFoto" id="vistaFoto">
   <img id="imgGrande" alt="">
   <div class="leyenda" id="leyendaGrande"></div>
-  <button class="btn sec" id="cerrarFoto" style="max-width:420px;margin-top:14px">Cerrar</button>
+  <div class="navFoto"><button id="fotoAnt">◀</button><button class="cerrar" id="cerrarFoto">Cerrar</button><button id="fotoSig">▶</button></div>
+</div>
+<div class="album" id="album">
+  <div class="cab"><h2>📚 Nuestro álbum</h2><button id="cerrarAlbum">Cerrar</button></div>
+  <div class="cuerpo" id="albumCuerpo"></div>
 </div>
 <div class="pantallaFoto" id="previa">
   <img id="imgPrevia" alt="">
@@ -327,13 +352,82 @@ function pintarFoto(f) {
 }
 $('marcoFoto').onclick = () => {
   if (!fotoActual) return $('archivo').click();
-  $('imgGrande').src = fotoActual.url;
-  $('leyendaGrande').textContent = fotoActual.texto || '';
-  $('vistaFoto').classList.add('ver');
+  verFotos([{ url: fotoActual.url, texto: fotoActual.texto, creado: fotoActual.creado, nombre: fotoActual.de }], 0);
   guardar('amorsh-foto-vista', fotoActual.creado);
   const n = $('marcoFoto').querySelector('.nueva'); if (n) n.remove();
 };
+
+// ---- visor de fotos (anterior / siguiente y deslizar) ----
+let visor = { lista: [], i: 0 };
+function fechaCorta(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-CO', { day:'numeric', month:'short' }) + ' · ' + d.toLocaleTimeString('es-CO', { hour:'numeric', minute:'2-digit' });
+}
+function verFotos(lista, i) { visor = { lista, i }; pintarVisor(); $('vistaFoto').classList.add('ver'); }
+function pintarVisor() {
+  const f = visor.lista[visor.i]; if (!f) return;
+  $('imgGrande').src = f.url;
+  $('leyendaGrande').style.whiteSpace = 'pre-line';
+  $('leyendaGrande').textContent = (f.nombre ? f.nombre + ' · ' : '') + fechaCorta(f.creado) + (f.texto ? '\n' + f.texto : '');
+  $('fotoAnt').disabled = visor.i <= 0;
+  $('fotoSig').disabled = visor.i >= visor.lista.length - 1;
+  $('fotoAnt').style.visibility = $('fotoSig').style.visibility = visor.lista.length > 1 ? 'visible' : 'hidden';
+}
+$('fotoAnt').onclick = () => { if (visor.i > 0) { visor.i--; pintarVisor(); } };
+$('fotoSig').onclick = () => { if (visor.i < visor.lista.length - 1) { visor.i++; pintarVisor(); } };
 $('cerrarFoto').onclick = () => $('vistaFoto').classList.remove('ver');
+let toqueX = null;
+$('vistaFoto').addEventListener('touchstart', e => { toqueX = e.touches[0].clientX; }, { passive:true });
+$('vistaFoto').addEventListener('touchend', e => {
+  if (toqueX == null) return;
+  const dx = e.changedTouches[0].clientX - toqueX; toqueX = null;
+  if (dx < -50) $('fotoSig').click(); else if (dx > 50) $('fotoAnt').click();
+});
+
+// ---- álbum ----
+let album = { fotos: [], hayMas: false, cargando: false };
+$('btnAlbum').onclick = async () => {
+  $('album').classList.add('ver');
+  album = { fotos: [], hayMas: false, cargando: false };
+  $('albumCuerpo').innerHTML = '<div class="vacio">Cargando… 💗</div>';
+  await cargarAlbum();
+};
+$('cerrarAlbum').onclick = () => $('album').classList.remove('ver');
+async function cargarAlbum() {
+  if (album.cargando) return; album.cargando = true;
+  try {
+    const ultimo = album.fotos[album.fotos.length - 1];
+    const r = await api('album', ultimo ? { antes: ultimo.creado } : {});
+    album.fotos = album.fotos.concat(r.fotos.filter(f => f.url)); album.hayMas = r.hayMas;
+    pintarAlbum();
+  } catch (e) { $('albumCuerpo').innerHTML = '<div class="vacio">No se pudo cargar 😢<br>revisa tu internet</div>'; }
+  album.cargando = false;
+}
+function pintarAlbum() {
+  const c = $('albumCuerpo'); c.innerHTML = '';
+  if (!album.fotos.length) { c.innerHTML = '<div class="vacio">📷<br>Aún no hay fotos.<br>¡Manda la primera!</div>'; return; }
+  const hoy = new Date().toDateString(), ayer = new Date(Date.now() - 86400000).toDateString();
+  let diaActual = null, rejilla = null;
+  album.fotos.forEach((f, i) => {
+    const d = new Date(f.creado), clave = d.toDateString();
+    if (clave !== diaActual) {
+      diaActual = clave;
+      const t = document.createElement('div'); t.className = 'dia';
+      t.textContent = clave === hoy ? 'Hoy' : clave === ayer ? 'Ayer' : d.toLocaleDateString('es-CO', { weekday:'long', day:'numeric', month:'long' });
+      c.appendChild(t);
+      rejilla = document.createElement('div'); rejilla.className = 'rejilla'; c.appendChild(rejilla);
+    }
+    const m = document.createElement('div'); m.className = 'mini';
+    const img = new Image(); img.loading = 'lazy'; img.src = f.url; img.alt = ''; m.appendChild(img);
+    const de = document.createElement('div'); de.className = 'de ini ' + (f.de === 'J' ? 'j' : 's'); de.textContent = f.de; m.appendChild(de);
+    m.onclick = () => verFotos(album.fotos, i);
+    rejilla.appendChild(m);
+  });
+  if (album.hayMas) {
+    const b = document.createElement('button'); b.className = 'btn sec mas'; b.textContent = 'Ver más fotos';
+    b.onclick = cargarAlbum; c.appendChild(b);
+  }
+}
 
 // elegir o tomar foto -> achicarla -> vista previa
 let fotoLista = null;
