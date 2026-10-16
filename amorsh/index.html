@@ -85,6 +85,11 @@
   .chips { display:flex; gap:7px; flex-wrap:wrap; justify-content:center; margin-bottom:12px; }
   .chip { border:2px solid var(--rosa2); background:transparent; color:var(--texto); border-radius:999px; padding:7px 12px; font:800 14px Nunito,sans-serif; cursor:pointer; }
   .chip.sel { background:var(--rosa); border-color:var(--rosa); color:#fff; }
+  .chip.urgente { border-color:#ff3b30; }
+  .chip.urgente.sel { background:#ff3b30; border-color:#ff3b30; }
+  body.urgente .boton { background:radial-gradient(circle at 35% 30%, #ff8a80, #ff3b30 60%, #c62828); animation:alarma .6s infinite; }
+  @keyframes alarma { 0%,100%{ box-shadow:0 14px 34px rgba(255,59,48,.5), 0 0 0 0 rgba(255,59,48,.45);} 50%{ box-shadow:0 14px 34px rgba(255,59,48,.5), 0 0 0 22px rgba(255,59,48,0);} }
+  body.urgente .etiqueta { color:#ff3b30; }
   .cuenta { display:flex; justify-content:space-around; background:var(--tarjeta); border-radius:20px; padding:12px 6px; box-shadow:0 3px 12px rgba(120,30,70,.08); }
   .cuenta div { text-align:center; font-size:12.5px; color:var(--suave); font-weight:700; }
   .cuenta b { display:block; font-size:24px; color:var(--texto); font-weight:900; }
@@ -194,6 +199,7 @@ const MENSAJES = [
   { emoji:'🥺', nombre:'Te extraño' },
   { emoji:'🤗', nombre:'Abrazo' },
   { emoji:'😘', nombre:'Beso' },
+  { emoji:'🚨', nombre:'RESPÓNDEME RÁPIDO' },
 ];
 const $ = id => document.getElementById(id);
 const leer = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -245,8 +251,8 @@ function pintarPersonas() {
 
 MENSAJES.forEach((m, i) => {
   const b = document.createElement('button');
-  b.className = 'chip' + (i === 0 ? ' sel' : ''); b.textContent = m.emoji + ' ' + m.nombre;
-  b.onclick = () => { tipo = i; document.querySelectorAll('.chip').forEach((c, k) => c.classList.toggle('sel', k === i)); $('etiqueta').textContent = m.nombre; };
+  b.className = 'chip' + (i === 0 ? ' sel' : '') + (m.emoji === '🚨' ? ' urgente' : ''); b.textContent = m.emoji + ' ' + m.nombre;
+  b.onclick = () => { tipo = i; document.querySelectorAll('.chip').forEach((c, k) => c.classList.toggle('sel', k === i)); $('etiqueta').textContent = m.nombre; document.body.classList.toggle('urgente', m.emoji === '🚨'); };
   $('chips').appendChild(b);
 });
 
