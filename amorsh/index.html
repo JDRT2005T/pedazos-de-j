@@ -57,7 +57,7 @@
   input.codigo:focus { outline:none; border-color:var(--rosa); }
 
   /* ---- principal ---- */
-  #principal { justify-content:space-between; }
+  #principal { justify-content:space-between; overflow-y:auto; }
   .arriba { display:flex; flex-direction:column; align-items:center; width:100%; position:relative; }
   .engrane { position:absolute; right:0; top:0; border:none; background:none; font-size:24px; cursor:pointer; padding:6px; opacity:.7; }
   .fotos { display:flex; margin-top:6px; }
@@ -68,8 +68,8 @@
   .avisoNoti { width:100%; max-width:420px; margin-top:14px; background:var(--tarjeta); border:2px dashed var(--rosa2); border-radius:18px; padding:12px; text-align:center; font-weight:700; }
   .avisoNoti .btn { margin-top:10px; padding:12px; font-size:15px; }
 
-  .zona { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; width:100%; position:relative; min-height:260px; }
-  .boton { width:min(52vw,210px); height:min(52vw,210px); border-radius:50%; border:none; cursor:pointer; position:relative;
+  .zona { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; width:100%; position:relative; min-height:200px; }
+  .boton { width:min(36vw,150px); height:min(36vw,150px); border-radius:50%; border:none; cursor:pointer; position:relative;
            background:radial-gradient(circle at 35% 30%, var(--rosa2), var(--rosa) 60%, #e0306d);
            box-shadow:0 14px 34px rgba(255,79,139,.45), inset 0 -6px 14px rgba(0,0,0,.12);
            display:grid; place-items:center; transition:transform .12s; animation:latir 1.6s infinite; touch-action:manipulation; }
@@ -94,6 +94,25 @@
   .cuenta div { text-align:center; font-size:12.5px; color:var(--suave); font-weight:700; }
   .cuenta b { display:block; font-size:24px; color:var(--texto); font-weight:900; }
   .ultimo { text-align:center; font-size:13px; color:var(--suave); margin-top:10px; min-height:18px; font-weight:700; }
+
+  /* foto del momento */
+  .polaroid { width:100%; max-width:420px; margin-top:12px; background:var(--tarjeta); border-radius:22px; padding:10px; box-shadow:0 4px 16px rgba(120,30,70,.1); }
+  .polaroid .marco { position:relative; width:100%; aspect-ratio:3/2; border-radius:15px; overflow:hidden; background:linear-gradient(135deg,#ffd6e5,#ffe9d6); display:grid; place-items:center; cursor:pointer; }
+  .polaroid img { width:100%; height:100%; object-fit:cover; display:block; }
+  .polaroid .vacia { text-align:center; color:#a0687f; font-weight:800; font-size:14px; padding:10px; }
+  .polaroid .vacia span { font-size:34px; display:block; }
+  .polaroid .pie { display:flex; align-items:center; gap:8px; margin-top:9px; }
+  .polaroid .quien { flex:1; min-width:0; font-size:13px; color:var(--suave); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .polaroid .quien b { color:var(--texto); }
+  .btnFoto { border:none; border-radius:999px; padding:9px 14px; background:var(--rosa); color:#fff; font:800 14px Nunito,sans-serif; cursor:pointer; flex:none; }
+  .nueva { position:absolute; top:8px; left:8px; background:var(--rosa); color:#fff; font-weight:900; font-size:12px; border-radius:999px; padding:3px 9px; animation:latir 1.6s infinite; }
+  .pantallaFoto { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:40; display:none; flex-direction:column; align-items:center; justify-content:center; padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 14px); }
+  .pantallaFoto.ver { display:flex; }
+  .pantallaFoto img { max-width:100%; max-height:70vh; border-radius:16px; }
+  .pantallaFoto .leyenda { color:#fff; font-weight:800; margin-top:12px; text-align:center; font-size:17px; }
+  .pantallaFoto input { width:100%; max-width:420px; margin-top:12px; padding:13px 14px; border-radius:16px; border:none; font:700 16px Nunito,sans-serif; -webkit-user-select:text; user-select:text; }
+  .pantallaFoto .fila { display:flex; gap:10px; width:100%; max-width:420px; margin-top:12px; }
+  .pantallaFoto .fila .btn { flex:1; }
 
   /* notificación dentro de la app */
   .noti { position:fixed; top:-110px; left:12px; right:12px; max-width:420px; margin:0 auto; z-index:20; background:rgba(245,240,243,.9); color:#1b1418;
@@ -158,6 +177,11 @@
     <button class="engrane" id="abrirAjustes" aria-label="Ajustes">⚙️</button>
     <div class="fotos"><div class="foto" id="fotoA"></div><div class="foto s" id="fotoB"></div></div>
     <div class="dias"><b id="nDias">0</b> días juntos 💗</div>
+    <div class="polaroid">
+      <div class="marco" id="marcoFoto"><div class="vacia" id="fotoVacia"><span>📷</span>Aquí sale la última foto que te mande</div></div>
+      <div class="pie"><div class="quien" id="fotoQuien">Foto del momento</div><button class="btnFoto" id="btnFoto">📸 Enviar foto</button></div>
+      <input type="file" id="archivo" accept="image/*" hidden>
+    </div>
     <div class="avisoNoti" id="avisoNoti" hidden>
       🔔 Activa las notificaciones para que te lleguen sus corazones
       <button class="btn" id="activarNoti">Activar notificaciones</button>
@@ -180,6 +204,17 @@
 <div class="noti" id="noti"><div class="ico"><svg viewBox="0 0 24 24"><path fill="#fff" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.5h2c.7-1.3 2.2-2.5 4.3-2.5 3.7 0 5.8 3.9 4.3 7.3C19.5 16.4 12 21 12 21z"/></svg></div>
   <div class="txt"><b>Amorsh 💗</b><br><span id="notiTxt"></span></div></div>
 <div class="brillo" id="brillo"></div>
+
+<div class="pantallaFoto" id="vistaFoto">
+  <img id="imgGrande" alt="">
+  <div class="leyenda" id="leyendaGrande"></div>
+  <button class="btn sec" id="cerrarFoto" style="max-width:420px;margin-top:14px">Cerrar</button>
+</div>
+<div class="pantallaFoto" id="previa">
+  <img id="imgPrevia" alt="">
+  <input id="textoFoto" maxlength="120" placeholder="Escribe algo (opcional) 💬">
+  <div class="fila"><button class="btn sec" id="cancelarFoto">Cancelar</button><button class="btn" id="enviarFoto">Enviar 💗</button></div>
+</div>
 
 <div class="hoja" id="ajustes">
   <div class="tarjeta">
@@ -273,9 +308,73 @@ $('boton').onclick = async () => {
 };
 function ponerEstado(t) { $('estado').textContent = t; clearTimeout(tEstado); tEstado = setTimeout(() => $('estado').textContent = '', 2600); }
 
+let fotoActual = null;
+function pintarFoto(f) {
+  if (!f) return;
+  const nueva = !fotoActual || fotoActual.creado !== f.creado;
+  fotoActual = f;
+  const marco = $('marcoFoto');
+  if (nueva) {
+    marco.innerHTML = '';
+    const img = new Image(); img.src = f.url; img.alt = 'Foto'; marco.appendChild(img);
+    const visto = leer('amorsh-foto-vista');
+    if (visto !== f.creado) { const n = document.createElement('div'); n.className = 'nueva'; n.textContent = '¡Nueva!'; marco.appendChild(n); }
+  }
+  const d = new Date(f.creado);
+  const hoy = new Date().toDateString() === d.toDateString();
+  $('fotoQuien').innerHTML = '<b>' + f.de + '</b> · ' + (hoy ? 'hoy ' : d.toLocaleDateString('es-CO', { day:'numeric', month:'short' }) + ' ') + d.toLocaleTimeString('es-CO', { hour:'numeric', minute:'2-digit' }) + (f.texto ? ' · ' : '');
+  if (f.texto) $('fotoQuien').append(f.texto);
+}
+$('marcoFoto').onclick = () => {
+  if (!fotoActual) return $('archivo').click();
+  $('imgGrande').src = fotoActual.url;
+  $('leyendaGrande').textContent = fotoActual.texto || '';
+  $('vistaFoto').classList.add('ver');
+  guardar('amorsh-foto-vista', fotoActual.creado);
+  const n = $('marcoFoto').querySelector('.nueva'); if (n) n.remove();
+};
+$('cerrarFoto').onclick = () => $('vistaFoto').classList.remove('ver');
+
+// elegir o tomar foto -> achicarla -> vista previa
+let fotoLista = null;
+$('btnFoto').onclick = () => { $('archivo').value = ''; $('archivo').click(); };
+$('archivo').onchange = async () => {
+  const f = $('archivo').files[0]; if (!f) return;
+  try {
+    fotoLista = await achicar(f, 1280, 0.82);
+    $('imgPrevia').src = fotoLista; $('textoFoto').value = '';
+    $('previa').classList.add('ver');
+  } catch (e) { ponerEstado('No pude abrir esa foto 😢'); }
+};
+function achicar(archivo, lado, calidad) {
+  return new Promise((ok, mal) => {
+    const url = URL.createObjectURL(archivo), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, lado / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', calidad));
+    };
+    img.onerror = mal; img.src = url;
+  });
+}
+$('cancelarFoto').onclick = () => { $('previa').classList.remove('ver'); fotoLista = null; };
+$('enviarFoto').onclick = async () => {
+  if (!fotoLista) return;
+  $('enviarFoto').disabled = true; $('enviarFoto').textContent = 'Enviando…';
+  try {
+    await api('foto', { imagen: fotoLista, texto: $('textoFoto').value });
+    $('previa').classList.remove('ver'); fotoLista = null;
+    ponerEstado('¡Foto enviada! 📸'); lluvia(6, '📸', $('btnFoto').getBoundingClientRect());
+  } catch (e) { alertaSuave('No se pudo enviar la foto 😢 revisa tu internet'); }
+  $('enviarFoto').disabled = false; $('enviarFoto').textContent = 'Enviar 💗';
+};
+function alertaSuave(t) { $('textoFoto').value = ''; $('textoFoto').placeholder = t; }
+
 async function refrescar() {
   try {
     const e = await api('estado');
+    pintarFoto(e.foto);
     $('env').textContent = e.enviados; $('rec').textContent = e.recibidos;
     if (e.ultimo) {
       const d = new Date(e.ultimo.creado);
