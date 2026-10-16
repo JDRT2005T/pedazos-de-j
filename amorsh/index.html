@@ -135,6 +135,43 @@
   .navFoto button:disabled { opacity:.3; }
   .navFoto .cerrar { flex:1.4; background:#fff; color:#1b1418; }
 
+  /* calendario */
+  .btnCal { position:absolute; left:0; top:0; border:none; background:none; font-size:24px; cursor:pointer; padding:6px; }
+  .proximo { margin-top:8px; background:var(--tarjeta); border-radius:999px; padding:7px 14px; font-weight:800; font-size:14px; box-shadow:0 3px 12px rgba(120,30,70,.08); cursor:pointer; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cal .cuerpo { padding-top:4px; }
+  .cal .banner { background:linear-gradient(135deg,#ff8fb6,#ff4f8b); color:#fff; border-radius:20px; padding:14px 16px; font-weight:800; text-align:center; margin-bottom:12px; }
+  .cal .banner b { font-size:26px; display:block; font-weight:900; }
+  .cal .mesNav { display:flex; align-items:center; justify-content:space-between; margin:4px 2px 8px; }
+  .cal .mesNav b { font-size:18px; font-weight:900; text-transform:capitalize; }
+  .cal .mesNav button { border:none; background:var(--tarjeta); color:var(--texto); width:40px; height:40px; border-radius:50%; font-size:16px; cursor:pointer; }
+  .cal .semana, .cal .dias7 { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+  .cal .semana div { text-align:center; font-size:12px; font-weight:800; color:var(--suave); padding:4px 0; }
+  .cal .celda { aspect-ratio:1; border-radius:12px; background:var(--tarjeta); display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:800; font-size:15px; cursor:pointer; position:relative; border:2px solid transparent; }
+  .cal .celda.fuera { visibility:hidden; }
+  .cal .celda.hoy { border-color:var(--rosa); }
+  .cal .celda.sel { background:var(--rosa); color:#fff; }
+  .cal .celda .marca { font-size:13px; line-height:1; height:14px; }
+  .cal .celda.mes { background:linear-gradient(135deg,#ffd6e5,#ffc2d8); color:#7a1f45; }
+  .cal .celda.mes.sel { background:var(--rosa); color:#fff; }
+  .cal h3 { margin:18px 4px 8px; font-size:16px; font-weight:900; }
+  .cal .plan { display:flex; align-items:center; gap:12px; background:var(--tarjeta); border-radius:16px; padding:11px 12px; margin-bottom:8px; box-shadow:0 3px 10px rgba(120,30,70,.06); }
+  .cal .plan .emo { font-size:26px; }
+  .cal .plan .info { flex:1; min-width:0; }
+  .cal .plan .info b { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cal .plan .info span { font-size:13px; color:var(--suave); font-weight:700; }
+  .cal .plan button { border:none; background:none; font-size:18px; cursor:pointer; padding:6px; color:var(--suave); font-weight:800; }
+  .cal .nada { color:var(--suave); font-weight:700; text-align:center; padding:10px; }
+  .cal .agregar { margin-top:12px; }
+  .formPlan label { display:block; font-weight:800; font-size:14px; color:var(--suave); margin:12px 2px 6px; }
+  .formPlan input { width:100%; padding:13px 14px; border-radius:14px; border:2px solid var(--linea); background:var(--fondo); color:var(--texto); font:700 16px Nunito,sans-serif; -webkit-user-select:text; user-select:text; }
+  .formPlan input:focus { outline:none; border-color:var(--rosa); }
+  .formPlan .fila2 { display:flex; gap:10px; }
+  .formPlan .fila2 > div { flex:1; min-width:0; }
+  .emojis { display:flex; flex-wrap:wrap; gap:6px; }
+  .emojis button { font-size:22px; width:44px; height:44px; border-radius:12px; border:2px solid var(--linea); background:var(--fondo); cursor:pointer; }
+  .emojis button.sel { border-color:var(--rosa); background:rgba(255,79,139,.15); }
+  .formPlan .error { margin-top:6px; }
+
   /* notificación dentro de la app */
   .noti { position:fixed; top:-110px; left:12px; right:12px; max-width:420px; margin:0 auto; z-index:20; background:rgba(245,240,243,.9); color:#1b1418;
           -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); border-radius:20px; padding:11px 13px;
@@ -151,7 +188,7 @@
   @keyframes temblar { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px) rotate(-1deg)} 40%{transform:translateX(6px) rotate(1deg)} 60%{transform:translateX(-4px)} 80%{transform:translateX(3px)} }
 
   /* ajustes */
-  .hoja { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:flex-end; justify-content:center; z-index:30; }
+  .hoja { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:flex-end; justify-content:center; z-index:38; }
   .hoja.ver { display:flex; }
   .hoja .tarjeta { width:100%; max-width:440px; border-radius:26px 26px 0 0; margin:0; padding:20px 16px calc(env(safe-area-inset-bottom) + 20px); }
   .hoja .btn { margin-top:10px; }
@@ -195,9 +232,11 @@
 <!-- ====== 3. principal ====== -->
 <section class="vista" id="principal">
   <div class="arriba">
+    <button class="btnCal" id="abrirCal" aria-label="Calendario">📅</button>
     <button class="engrane" id="abrirAjustes" aria-label="Ajustes">⚙️</button>
     <div class="fotos"><div class="foto" id="fotoA"></div><div class="foto s" id="fotoB"></div></div>
     <div class="dias"><b id="nDias">0</b> días juntos 💗</div>
+    <div class="proximo" id="proximo"></div>
     <div class="polaroid">
       <div class="marco" id="marcoFoto"><div class="vacia" id="fotoVacia"><span>📷</span>Aquí sale la última foto que te mande</div></div>
       <div class="pie"><div class="quien" id="fotoQuien">Foto del momento</div><button class="btnAlbum" id="btnAlbum">📚 Álbum</button><button class="btnFoto" id="btnFoto">📸 Enviar foto</button></div>
@@ -230,6 +269,34 @@
   <img id="imgGrande" alt="">
   <div class="leyenda" id="leyendaGrande"></div>
   <div class="navFoto"><button id="fotoAnt">◀</button><button class="cerrar" id="cerrarFoto">Cerrar</button><button id="fotoSig">▶</button></div>
+</div>
+<div class="album cal" id="cal">
+  <div class="cab"><h2>📅 Calendario</h2><button id="cerrarCal">Cerrar</button></div>
+  <div class="cuerpo">
+    <div class="banner" id="calBanner"></div>
+    <div class="mesNav"><button id="mesAnt">◀</button><b id="mesNombre"></b><button id="mesSig">▶</button></div>
+    <div class="semana"><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div><div>D</div></div>
+    <div class="dias7" id="calDias"></div>
+    <h3 id="calTituloLista">Próximos planes</h3>
+    <div id="calLista"></div>
+    <button class="btn agregar" id="nuevoPlan">＋ Agregar plan</button>
+  </div>
+</div>
+<div class="hoja" id="hojaPlan">
+  <div class="tarjeta formPlan">
+    <h3>Nuevo plan 💗</h3>
+    <label>¿Qué vamos a hacer?</label>
+    <input id="planTitulo" maxlength="60" placeholder="Ej: Cine, comer pizza, playa…">
+    <div class="fila2">
+      <div><label>Fecha</label><input type="date" id="planFecha"></div>
+      <div><label>Hora (opcional)</label><input type="time" id="planHora"></div>
+    </div>
+    <label>Emoji</label>
+    <div class="emojis" id="planEmojis"></div>
+    <div class="error" id="planError"></div>
+    <button class="btn" id="guardarPlan">Guardar plan 📅</button>
+    <button class="btn sec" id="cancelarPlan">Cancelar</button>
+  </div>
 </div>
 <div class="album" id="album">
   <div class="cab"><h2>📚 Nuestro álbum</h2><button id="cerrarAlbum">Cerrar</button></div>
@@ -384,6 +451,125 @@ $('vistaFoto').addEventListener('touchend', e => {
   if (dx < -50) $('fotoSig').click(); else if (dx > 50) $('fotoAnt').click();
 });
 
+// ---- calendario ----
+const MES_NOMBRES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const EMOJIS = ['💗','🎬','🍔','🍕','🍦','🏖️','🎉','✈️','🎂','🛍️','🎮','🌙','⛪','🏋️'];
+let cal = { eventos: [], mes: new Date(new Date().getFullYear(), new Date().getMonth(), 1), sel: null, borrar: null };
+const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const deIso = f => new Date(+f.slice(0, 4), +f.slice(5, 7) - 1, +f.slice(8, 10));
+const hoyIso = () => iso(new Date());
+function horaLinda(h) { if (!h) return ''; const [a, b] = h.split(':').map(Number); return (a % 12 || 12) + ':' + String(b).padStart(2, '0') + (a < 12 ? ' a. m.' : ' p. m.'); }
+function cuando(f) {
+  const n = Math.round((deIso(f) - deIso(hoyIso())) / 86400000);
+  if (n === 0) return 'hoy'; if (n === 1) return 'mañana'; if (n > 1 && n < 7) return deIso(f).toLocaleDateString('es-CO', { weekday:'long' });
+  return deIso(f).toLocaleDateString('es-CO', { weekday:'short', day:'numeric', month:'short' });
+}
+function mesesEn(f) { const d = deIso(f); return (d.getFullYear() - 2026) * 12 + d.getMonth() - 7; }
+function nombreMeses(n) { return n % 12 === 0 ? (n === 12 ? '1 año' : (n / 12) + ' años') : n + ' meses'; }
+function proximoMesiversario() {
+  const h = new Date(); let d = new Date(h.getFullYear(), h.getMonth(), 1);
+  if (iso(d) !== hoyIso()) d = new Date(h.getFullYear(), h.getMonth() + 1, 1);
+  return { fecha: iso(d), meses: mesesEn(iso(d)), faltan: Math.round((d - deIso(hoyIso())) / 86400000) };
+}
+function pintarProximo(ev) {
+  const m = proximoMesiversario(), p = $('proximo');
+  if (ev && Math.round((deIso(ev.fecha) - deIso(hoyIso())) / 86400000) <= m.faltan) {
+    p.textContent = '📅 ' + ev.emoji + ' ' + ev.titulo + ' · ' + cuando(ev.fecha) + (ev.hora ? ', ' + horaLinda(ev.hora) : '');
+  } else {
+    p.textContent = m.faltan === 0 ? '💗 ¡Hoy cumplimos ' + nombreMeses(m.meses) + '!' : '💗 Faltan ' + m.faltan + (m.faltan === 1 ? ' día' : ' días') + ' para los ' + nombreMeses(m.meses);
+  }
+}
+$('proximo').onclick = () => $('abrirCal').click();
+$('abrirCal').onclick = async () => { $('cal').classList.add('ver'); cal.sel = null; pintarCal(); await cargarEventos(); };
+$('cerrarCal').onclick = () => $('cal').classList.remove('ver');
+$('mesAnt').onclick = () => { cal.mes = new Date(cal.mes.getFullYear(), cal.mes.getMonth() - 1, 1); pintarCal(); };
+$('mesSig').onclick = () => { cal.mes = new Date(cal.mes.getFullYear(), cal.mes.getMonth() + 1, 1); pintarCal(); };
+async function cargarEventos() {
+  try { cal.eventos = (await api('eventos')).eventos; pintarCal(); }
+  catch (e) { $('calLista').innerHTML = '<div class="nada">No se pudo cargar 😢 revisa tu internet</div>'; }
+}
+function pintarCal() {
+  const m = proximoMesiversario();
+  $('calBanner').innerHTML = m.faltan === 0 ? '<b>¡Hoy!</b>Cumplimos ' + nombreMeses(m.meses) + ' juntos 🥳💗'
+    : '<b>' + m.faltan + (m.faltan === 1 ? ' día' : ' días') + '</b>para cumplir ' + nombreMeses(m.meses) + ' juntos 💗';
+  $('mesNombre').textContent = MES_NOMBRES[cal.mes.getMonth()] + ' ' + cal.mes.getFullYear();
+  const cont = $('calDias'); cont.innerHTML = '';
+  const vacios = (cal.mes.getDay() + 6) % 7;
+  for (let i = 0; i < vacios; i++) { const c = document.createElement('div'); c.className = 'celda fuera'; cont.appendChild(c); }
+  const total = new Date(cal.mes.getFullYear(), cal.mes.getMonth() + 1, 0).getDate();
+  for (let d = 1; d <= total; d++) {
+    const f = iso(new Date(cal.mes.getFullYear(), cal.mes.getMonth(), d));
+    const evs = cal.eventos.filter(e => e.fecha === f);
+    const esMes = d === 1 && mesesEn(f) > 0;
+    const c = document.createElement('div');
+    c.className = 'celda' + (f === hoyIso() ? ' hoy' : '') + (f === cal.sel ? ' sel' : '') + (esMes ? ' mes' : '');
+    c.innerHTML = '<span>' + d + '</span><span class="marca"></span>';
+    c.querySelector('.marca').textContent = evs.length ? evs[0].emoji : (esMes ? '💗' : '');
+    c.onclick = () => { cal.sel = cal.sel === f ? null : f; pintarCal(); };
+    cont.appendChild(c);
+  }
+  // lista: dia elegido o proximos planes
+  const lista = $('calLista'); lista.innerHTML = '';
+  let evs;
+  if (cal.sel) {
+    $('calTituloLista').textContent = deIso(cal.sel).toLocaleDateString('es-CO', { weekday:'long', day:'numeric', month:'long' });
+    evs = cal.eventos.filter(e => e.fecha === cal.sel);
+    if (cal.sel.endsWith('-01') && mesesEn(cal.sel) > 0) agregarFila(lista, { emoji:'💗', titulo:'¡Cumplimos ' + nombreMeses(mesesEn(cal.sel)) + '!', fecha:cal.sel }, false);
+  } else {
+    $('calTituloLista').textContent = 'Próximos planes';
+    evs = cal.eventos.filter(e => e.fecha >= hoyIso());
+  }
+  evs.forEach(e => agregarFila(lista, e, true));
+  if (!lista.children.length) lista.innerHTML = '<div class="nada">' + (cal.sel ? 'Nada este día. ¿Planeamos algo? 😏' : 'No hay planes todavía 👀') + '</div>';
+  $('nuevoPlan').textContent = cal.sel ? '＋ Agregar plan este día' : '＋ Agregar plan';
+}
+function agregarFila(lista, e, borrable) {
+  const fila = document.createElement('div'); fila.className = 'plan';
+  fila.innerHTML = '<div class="emo"></div><div class="info"><b></b><span></span></div>';
+  fila.querySelector('.emo').textContent = e.emoji;
+  fila.querySelector('b').textContent = e.titulo;
+  fila.querySelector('span').textContent = cuando(e.fecha) + (e.hora ? ' · ' + horaLinda(e.hora) : '') + (e.creado_por ? ' · lo puso ' + (e.creado_por === 'J' ? 'J' : 'Amorsh') : '');
+  if (borrable) {
+    const b = document.createElement('button');
+    b.textContent = cal.borrar === e.id ? '¿Borrar?' : '🗑️';
+    b.onclick = async () => {
+      if (cal.borrar !== e.id) { cal.borrar = e.id; pintarCal(); return; }
+      cal.borrar = null;
+      try { await api('evento_borrar', { id: e.id }); cal.eventos = cal.eventos.filter(x => x.id !== e.id); pintarCal(); refrescar(); } catch (err) {}
+    };
+    fila.appendChild(b);
+  }
+  lista.appendChild(fila);
+}
+let emojiPlan = '💗';
+EMOJIS.forEach(em => {
+  const b = document.createElement('button'); b.textContent = em;
+  b.onclick = () => { emojiPlan = em; document.querySelectorAll('#planEmojis button').forEach(x => x.classList.toggle('sel', x === b)); };
+  $('planEmojis').appendChild(b);
+});
+$('nuevoPlan').onclick = () => {
+  $('planTitulo').value = ''; $('planHora').value = ''; $('planError').textContent = '';
+  $('planFecha').value = cal.sel || hoyIso();
+  emojiPlan = '💗'; document.querySelectorAll('#planEmojis button').forEach((x, i) => x.classList.toggle('sel', i === 0));
+  $('hojaPlan').classList.add('ver');
+};
+$('cancelarPlan').onclick = () => $('hojaPlan').classList.remove('ver');
+$('guardarPlan').onclick = async () => {
+  const titulo = $('planTitulo').value.trim(), fecha = $('planFecha').value, hora = $('planHora').value;
+  if (!titulo) return $('planError').textContent = 'Escribe qué van a hacer 👆';
+  if (!fecha) return $('planError').textContent = 'Elige la fecha 📅';
+  if (fecha < hoyIso()) return $('planError').textContent = 'Esa fecha ya pasó 🙈';
+  $('guardarPlan').disabled = true;
+  try {
+    await api('evento_nuevo', { titulo, fecha, hora: hora ? hora.slice(0, 5) : null, emoji: emojiPlan });
+    $('hojaPlan').classList.remove('ver');
+    cal.mes = new Date(+fecha.slice(0, 4), +fecha.slice(5, 7) - 1, 1); cal.sel = fecha;
+    await cargarEventos(); refrescar();
+    ponerEstado('¡Plan guardado! 📅');
+  } catch (e) { $('planError').textContent = 'No se pudo guardar 😢 revisa tu internet'; }
+  $('guardarPlan').disabled = false;
+};
+
 // ---- álbum ----
 let album = { fotos: [], hayMas: false, cargando: false };
 $('btnAlbum').onclick = async () => {
@@ -469,6 +655,7 @@ async function refrescar() {
   try {
     const e = await api('estado');
     pintarFoto(e.foto);
+    pintarProximo(e.proximo);
     $('env').textContent = e.enviados; $('rec').textContent = e.recibidos;
     if (e.ultimo) {
       const d = new Date(e.ultimo.creado);
